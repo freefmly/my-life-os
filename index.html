@@ -12,10 +12,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260718-2" />
-    <link rel="stylesheet" href="edits.css?v=20260718-3" />
+    <link rel="stylesheet" href="edits.css?v=20260718-5" />
   </head>
   <body>
     <div id="growthToast" class="growth-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="pullToRefresh" class="pull-to-refresh" role="status" aria-live="polite" aria-atomic="true"><span class="pull-to-refresh-icon">↓</span><span id="pullToRefreshText">당겨서 새로고침</span></div>
     <div class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="#today"><span class="brand-mark">✦</span> my life</a>
@@ -238,6 +239,6 @@
 
     <dialog id="vrPriceDialog"><form method="dialog" id="vrPriceForm"><div class="modal-top"><div><p class="eyebrow">TQQQ CURRENT PRICE</p><h2>현재 가격 업데이트</h2></div><button class="close-button" type="button" data-close-dialog="vrPriceDialog" aria-label="닫기">×</button></div><p class="auth-intro">현재 TQQQ 가격을 입력하면 평가금 E가 자동으로 갱신됩니다.</p><label>기준일<input id="vrPriceDate" type="date" required /></label><label>현재 TQQQ 가격 (USD)<input id="vrPriceValue" type="number" min="0" step="0.0001" required /></label><menu><button class="text-button" type="button" data-close-dialog="vrPriceDialog">취소</button><button class="save-button" type="submit">가격 반영</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="app.js?v=20260718-6"></script>
+    <script src="app.js?v=20260718-8"></script>
   </body>
 </html>

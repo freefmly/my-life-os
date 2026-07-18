@@ -44,6 +44,8 @@ const tqqqSummary = $('#tqqqSummary');
 const tqqqChart = $('#tqqqChart');
 const tqqqCycleList = $('#tqqqCycleList');
 const vrTradeList = $('#vrTradeList');
+const pullToRefresh = $('#pullToRefresh');
+const pullToRefreshText = $('#pullToRefreshText');
 const profileDialog = $('#profileDialog');
 const authDialog = $('#authDialog');
 const authStatuses = document.querySelectorAll('[data-auth-status]');
@@ -63,6 +65,7 @@ function escapeHtml(text) { const el = document.createElement('div'); el.textCon
 function formatDate(value) { if (!value) return '언젠가'; const [year, month] = value.split('-'); return `${year}.${month}`; }
 function formatNumber(value) { return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value); }
 function formatWon(value) { return `${formatNumber(value)}원`; }
+function formatInvestmentWon(value) { return `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(value)}원`; }
 function formatPercent(value) { return value < 1 ? `${value.toFixed(2)}%` : `${Math.round(value)}%`; }
 const bookStatuses = { wish: '읽고 싶은 책', reading: '읽는 중', finished: '완독' };
 function createGoalId() { return globalThis.crypto?.randomUUID?.() || `goal-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
@@ -117,7 +120,7 @@ function updateBalanceSummary() { const values = getBalanceValues(); const total
 function loadBalanceMonth() { const snapshot = currentBalanceSnapshot(); ['cash', 'receivables', 'otherAssets', 'loans', 'payables', 'taxPayable'].forEach((key) => { $(`[data-balance-input="${key}"]`).value = snapshot?.[key] || ''; }); $('#balanceNote').value = snapshot?.note || ''; updateBalanceSummary(); }
 function renderAccounting() { if (!balanceMonth.value) balanceMonth.value = new Date().toISOString().slice(0, 7); loadBalanceMonth(); }
 function investmentNumber(value) { return Number(value) || 0; }
-function formatInvestmentMoney(value) { const amount = investmentNumber(value); if (investmentDisplayCurrency === 'KRW' && usdKrwRate) return `${formatNumber(amount * usdKrwRate)}원`; return `$${formatNumber(amount)}`; }
+function formatInvestmentMoney(value) { const amount = investmentNumber(value); if (investmentDisplayCurrency === 'KRW' && usdKrwRate) return formatInvestmentWon(amount * usdKrwRate); return `$${formatNumber(amount)}`; }
 function investmentDate(value) { return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)); }
 function investmentMetric(label, value, tone = '', detail = '') { return `<article class="investment-metric ${tone}"><span>${label}</span><strong class="${detail.includes('negative') ? 'negative' : detail.includes('positive') ? 'positive' : ''}">${value}</strong>${detail && !detail.includes('negative') && !detail.includes('positive') ? `<span>${detail}</span>` : ''}</article>`; }
 function makeInvestmentChart(records, series, legend) {
@@ -152,7 +155,7 @@ function renderInvestments() {
   const base = investmentNumber(soxl.principal) + (includeFee ? subscriptionFeeUsd : 0);
   const returnRate = base ? (profit / base) * 100 : 0;
   const profitTone = profit < 0 ? 'negative' : profit > 0 ? 'positive' : '';
-  soxlSummary.innerHTML = [investmentMetric('투자원금', formatInvestmentMoney(soxl.principal)), investmentMetric('매입 금액', formatInvestmentMoney(soxl.purchaseAmount)), investmentMetric('예수금', formatInvestmentMoney(soxl.cash)), investmentMetric('현재 보유 수량', `${formatNumber(investmentNumber(soxl.shares))}주`), investmentMetric('평균 매수가', formatInvestmentMoney(soxl.averagePrice)), investmentMetric('평가금', formatInvestmentMoney(soxl.valuation), 'accent'), investmentMetric(includeFee ? '평가 손익 · 구독료 반영' : '평가 손익 · 구독료 제외', `${profit >= 0 ? '+' : ''}${formatInvestmentMoney(profit)}`, '', profitTone), investmentMetric('수익률', `${returnRate >= 0 ? '+' : ''}${formatPercent(returnRate)}`, 'dark', profitTone), investmentMetric('누적 구독료 · KRW', formatWon(investmentNumber(soxl.subscriptionFeeKrw)))].join('');
+  soxlSummary.innerHTML = [investmentMetric('투자원금', formatInvestmentMoney(soxl.principal)), investmentMetric('매입 금액', formatInvestmentMoney(soxl.purchaseAmount)), investmentMetric('예수금', formatInvestmentMoney(soxl.cash)), investmentMetric('현재 보유 수량', `${formatNumber(investmentNumber(soxl.shares))}주`), investmentMetric('평균 매수가', formatInvestmentMoney(soxl.averagePrice)), investmentMetric('평가금', formatInvestmentMoney(soxl.valuation), 'accent'), investmentMetric(includeFee ? '평가 손익 · 구독료 반영' : '평가 손익 · 구독료 제외', `${profit >= 0 ? '+' : ''}${formatInvestmentMoney(profit)}`, '', profitTone), investmentMetric('수익률', `${returnRate >= 0 ? '+' : ''}${formatPercent(returnRate)}`, 'dark', profitTone), investmentMetric('누적 구독료 · KRW', formatInvestmentWon(investmentNumber(soxl.subscriptionFeeKrw)))].join('');
   const soxlRecords = sortedRecords(soxl.snapshots);
   soxlChart.innerHTML = makeInvestmentChart(soxlRecords, [{ key: 'total' }], [{ label: '평가금 + 예수금' }]);
   $('#soxlChartCaption').textContent = soxlRecords.length ? `${soxlRecords.length}개 기록 · 최근 ${investmentDate(soxlRecords.at(-1).date)}` : '아직 기록 없음';
@@ -356,6 +359,7 @@ $('#authForm').addEventListener('submit', async (event) => { event.preventDefaul
 $('#signUpButton').addEventListener('click', async () => { await submitAuth('signup'); });
 $('#resetButton').addEventListener('click', () => { if (!confirm('입력한 비전, 사진, 목표, 업적, 책, 사업, 투자 기록을 모두 지울까요?')) return; state = { vision: '', images: [], goals: [], achievements: [], books: [], businessSnapshots: [], investments: createDefaultInvestments(), growth: createDefaultGrowth() }; persist(); render(); });
 function setActiveView(view, writeHash = true) { const allowedViews = ['today', 'character', 'goals', 'business', 'investment', 'library']; const activeView = allowedViews.includes(view) ? view : 'today'; document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.viewPanel === activeView)); document.querySelectorAll('.main-nav [data-nav-view]').forEach((button) => button.classList.toggle('is-active', button.dataset.navView === activeView)); localStorage.setItem('my-life-active-view', activeView); if (writeHash && location.hash !== `#${activeView}`) location.hash = activeView; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setupPullToRefresh() { if (!window.matchMedia('(pointer: coarse)').matches) return; const threshold = 78; let startY = 0; let distance = 0; let tracking = false; const reset = () => { tracking = false; distance = 0; pullToRefresh.classList.remove('is-visible', 'is-ready', 'is-loading'); }; document.addEventListener('touchstart', (event) => { if (window.scrollY > 0 || event.touches.length !== 1) return; startY = event.touches[0].clientY; distance = 0; tracking = true; }, { passive: true }); document.addEventListener('touchmove', (event) => { if (!tracking || event.touches.length !== 1) return; const nextDistance = event.touches[0].clientY - startY; if (nextDistance <= 0 || window.scrollY > 0) { reset(); return; } distance = Math.min(nextDistance, 118); const ready = distance >= threshold; pullToRefresh.classList.add('is-visible'); pullToRefresh.classList.toggle('is-ready', ready); pullToRefreshText.textContent = ready ? '놓으면 새로고침' : '당겨서 새로고침'; if (distance > 8) event.preventDefault(); }, { passive: false }); const finish = () => { if (!tracking) return; const shouldRefresh = distance >= threshold; if (!shouldRefresh) { reset(); return; } tracking = false; pullToRefresh.classList.add('is-loading'); pullToRefreshText.textContent = '새로고침 중…'; window.setTimeout(() => window.location.reload(), 160); }; document.addEventListener('touchend', finish, { passive: true }); document.addEventListener('touchcancel', reset, { passive: true }); }
 document.addEventListener('click', (event) => { const navigation = event.target.closest('[data-nav-view]'); if (!navigation) return; setActiveView(navigation.dataset.navView); });
 window.addEventListener('hashchange', () => setActiveView(location.hash.slice(1), false));
 $('#today').textContent = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
@@ -364,5 +368,6 @@ state.goals.forEach((goal) => { if (recordMilestoneAchievements(goal)) addedAchi
 if (addedAchievementOnLoad) persist();
 render();
 ensureUsdKrwRate().then(renderInvestments, renderInvestments);
+setupPullToRefresh();
 setActiveView(location.hash.slice(1) || localStorage.getItem('my-life-active-view') || 'today', false);
 initializeCloudSync();

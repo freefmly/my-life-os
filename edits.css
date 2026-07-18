@@ -142,3 +142,9 @@ dialog .milestone-option input { display: inline-block; width: auto; margin: 3px
 #vrFlowField[hidden] { display: none !important; }
 
 .investment-record-actions { display: flex; gap: 2px; margin-top: 5px; }.investment-record-actions .text-button { padding: 3px 4px; font-size: 11px; }
+
+.pull-to-refresh { position: fixed; z-index: 30; top: 9px; left: 50%; display: flex; align-items: center; gap: 7px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.96); box-shadow: 0 8px 24px rgba(26,46,38,.12); color: var(--green); font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none; transform: translate(-50%, -150%); transition: transform .18s ease, opacity .18s ease; }.pull-to-refresh.is-visible { opacity: 1; transform: translate(-50%, 0); }.pull-to-refresh.is-ready { border-color: var(--green); background: var(--lime); }.pull-to-refresh.is-loading .pull-to-refresh-icon { animation: pull-refresh-spin .8s linear infinite; }@keyframes pull-refresh-spin { to { transform: rotate(360deg); } }
+
+.investment-view-actions { flex-direction: column; align-items: flex-end; gap: 4px; }.investment-view-actions .currency-toggle { order: 1; }.investment-view-actions .hint { order: 2; }
+
+@media (max-width: 650px) { .investment-section > .section-heading { align-items: flex-start; gap: 12px; }.investment-view-actions { flex-direction: column; align-items: flex-end; gap: 4px; padding-top: 2px; }.investment-view-actions .currency-toggle { order: 1; }.investment-view-actions .hint { order: 2; white-space: nowrap; font-size: 11px; } }
