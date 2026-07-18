@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="edits.css" />
+    <link rel="stylesheet" href="style.css?v=20260718-2" />
+    <link rel="stylesheet" href="edits.css?v=20260718-2" />
   </head>
   <body>
     <div id="growthToast" class="growth-toast" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -233,6 +233,6 @@
 
     <dialog id="vrCycleDialog"><form method="dialog" id="vrCycleForm"><div class="modal-top"><div><p class="eyebrow">TQQQ VR CYCLE</p><h2>리밸런싱 사이클 기록</h2></div><button class="close-button" type="button" data-close-dialog="vrCycleDialog" aria-label="닫기">×</button></div><p class="auth-intro">사용 중인 실력공식/시트에서 계산한 결과를 그대로 입력하세요. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>기록일<input id="vrCycleDate" type="date" required /></label><label>다음 V (USD)<input id="vrTargetValue" type="number" min="0" step="0.01" required /></label><label>G값<input id="vrGValue" type="number" min="0" step="0.01" required /></label><label>하단 밴드 (USD)<input id="vrLowerBand" type="number" min="0" step="0.01" required /></label><label>상단 밴드 (USD)<input id="vrUpperBand" type="number" min="0" step="0.01" required /></label><label>Pool · 예수금 (USD)<input id="vrPool" type="number" min="0" step="0.01" required /></label><label>보유 수량<input id="vrShares" type="number" min="0" step="0.0001" required /></label><label>평균 매수가 (USD)<input id="vrAveragePrice" type="number" min="0" step="0.0001" /></label><label>현재 TQQQ 가격 (USD)<input id="vrCurrentPrice" type="number" min="0" step="0.0001" required /></label><label>현재 평가금 E (USD)<input id="vrValuation" type="number" min="0" step="0.01" required /></label><label id="vrFlowField">2주 Pool 적립금 (USD)<input id="vrFlowAmount" type="number" min="0" step="0.01" /></label></div><label>이번 실행 / 메모<textarea id="vrCycleNote" maxlength="180" placeholder="예: 하단 밴드 도달 · 3주 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="vrCycleDialog">취소</button><button class="save-button" type="submit">사이클 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260718-2"></script>
   </body>
 </html>
