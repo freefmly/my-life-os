@@ -139,6 +139,14 @@ dialog .milestone-option input { display: inline-block; width: auto; margin: 3px
 
 @media (max-width: 420px) { .app-shell { padding-right: 16px; padding-left: 16px; }.sidebar { padding-right: 16px; padding-left: 16px; }.character-profile { align-items: flex-start; }.profile-name-line { flex-wrap: wrap; gap: 2px 8px; }.character-profile p:last-of-type { white-space: normal; }.mobile-auth-footer .auth-status { display: none; }.mobile-auth-footer { justify-content: flex-end; padding-right: 16px; padding-left: 16px; }.mobile-auth-footer .auth-button { width: 100%; } }
 
+/* Stacked game notifications for activity rewards and level-ups. */
+.growth-toast-stack { position: fixed; z-index: 1000; top: 24px; right: 24px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
+.growth-toast-stack .growth-toast { position: relative; top: auto; left: auto; display: flex; width: 100%; max-width: 360px; opacity: 0; transform: translateX(18px) scale(.96); animation: none !important; }
+.growth-toast-stack .growth-toast.is-visible { opacity: 1; transform: translateX(0) scale(1); animation: none !important; }
+.growth-toast-stack .growth-toast.is-level-up { border-color: rgba(229, 241, 122, .8); background: #183c30; }
+.growth-level-log > span { color: #a1b33e; font-weight: 800; }
+@media (max-width: 800px) { .growth-toast-stack { top: 14px; right: 16px; width: min(360px, calc(100vw - 32px)); } }
+
 #vrFlowField[hidden] { display: none !important; }
 
 .investment-record-actions { display: flex; gap: 2px; margin-top: 5px; }.investment-record-actions .text-button { padding: 3px 4px; font-size: 11px; }

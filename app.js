@@ -33,7 +33,7 @@ const growthDomainList = $('#growthDomainList');
 const growthActivityList = $('#growthActivityList');
 const growthLogList = $('#growthLogList');
 const todayActivityLogList = $('#todayActivityLogList');
-const growthToast = $('#growthToast');
+const growthToastStack = $('#growthToastStack');
 const domainSettingsList = $('#domainSettingsList');
 const skillSettingsList = $('#skillSettingsList');
 const activitySettingsList = $('#activitySettingsList');
@@ -216,15 +216,69 @@ function growthSkill(skillId) { return state.growth.skills.find((skill) => skill
 function domainXp(domainId) { return state.growth.skills.filter((skill) => skill.domainId === domainId).reduce((sum, skill) => sum + (skill.xp || 0), 0); }
 function lifeXp() { return state.growth.logs.reduce((sum, log) => sum + (log.lifeXp || 0), 0); }
 function rewardSummary(rewards) { return rewards.map((reward) => { const skill = growthSkill(reward.skillId); const name = skill?.name || reward.skillName; return name ? `${escapeHtml(name)} +${reward.xp}` : ''; }).filter(Boolean).join(' · ') || '연결 스킬 없음'; }
-let growthToastTimer;
-function showGrowthToast(activity) {
-  clearTimeout(growthToastTimer);
-  const skillRewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '스킬' }));
-  growthToast.innerHTML = `<span class="growth-toast-spark">✦</span><div><strong>${escapeHtml(activity.name)} 완료!</strong><p>캐릭터 <b>+${Number(activity.lifeXp) || 0} XP</b>${skillRewards.length ? ` · ${rewardSummary(skillRewards)}` : ''}</p></div>`;
-  growthToast.classList.remove('is-visible');
-  void growthToast.offsetWidth;
-  growthToast.classList.add('is-visible');
-  growthToastTimer = setTimeout(() => growthToast.classList.remove('is-visible'), 1800);
+let growthAudioContext = null;
+let growthSoundQueue = [];
+let isPlayingGrowthSound = false;
+function playGrowthSound(type) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return 0;
+  try {
+    growthAudioContext ||= new AudioContextClass();
+    if (growthAudioContext.state === 'suspended') growthAudioContext.resume();
+    const pattern = type === 'life-level-up' ? [[523.25, 0], [659.25, .11], [783.99, .22], [1046.5, .35]] : type === 'level-up' ? [[659.25, 0], [783.99, .13]] : [[783.99, 0], [1046.5, .09]];
+    const duration = type === 'life-level-up' ? .52 : type === 'level-up' ? .31 : .16;
+    const now = growthAudioContext.currentTime;
+    pattern.forEach(([frequency, offset]) => {
+      const oscillator = growthAudioContext.createOscillator();
+      const gain = growthAudioContext.createGain();
+      oscillator.type = type === 'activity' ? 'sine' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, now + offset);
+      gain.gain.setValueAtTime(.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(type === 'activity' ? .095 : .11, now + offset + .015);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + offset + .17);
+      oscillator.connect(gain).connect(growthAudioContext.destination);
+      oscillator.start(now + offset);
+      oscillator.stop(now + offset + .19);
+    });
+    return duration;
+  } catch { return 0; }
+}
+function queueGrowthSound(type) {
+  growthSoundQueue.push(type);
+  if (isPlayingGrowthSound) return;
+  const playNext = () => {
+    const nextType = growthSoundQueue.shift();
+    if (!nextType) { isPlayingGrowthSound = false; return; }
+    isPlayingGrowthSound = true;
+    const duration = playGrowthSound(nextType);
+    window.setTimeout(playNext, Math.max(180, duration * 1000 + 80));
+  };
+  playNext();
+}
+function showGrowthToast(title, message, type = 'activity') {
+  const toast = document.createElement('div');
+  const isLevelUp = type.endsWith('level-up');
+  toast.className = `growth-toast ${isLevelUp ? 'is-level-up' : ''}`;
+  toast.innerHTML = `<span class="growth-toast-spark">${isLevelUp ? '↑' : '✦'}</span><div><strong>${escapeHtml(title)}</strong><p>${message}</p></div>`;
+  growthToastStack.append(toast);
+  queueGrowthSound(type);
+  requestAnimationFrame(() => toast.classList.add('is-visible'));
+  window.setTimeout(() => { toast.classList.remove('is-visible'); window.setTimeout(() => toast.remove(), 240); }, 3200);
+}
+function levelUpLogsForActivity(activity, sourceLogId, loggedAt, lifeXpBefore, skillXpBefore) {
+  const logs = [];
+  const previousLifeLevel = xpLevel(lifeXpBefore).level;
+  const nextLifeLevel = xpLevel(lifeXpBefore + (Number(activity.lifeXp) || 0)).level;
+  for (let level = previousLifeLevel + 1; level <= nextLifeLevel; level += 1) logs.push({ id: createGoalId(), type: 'level-up', levelTarget: 'life', level, title: `캐릭터 Lv. ${level} 달성`, lifeXp: 0, rewards: [], sourceLogId, loggedAt });
+  const rewardTotals = activity.rewards.reduce((totals, reward) => ({ ...totals, [reward.skillId]: (totals[reward.skillId] || 0) + (Number(reward.xp) || 0) }), {});
+  Object.entries(rewardTotals).forEach(([skillId, gainedXp]) => {
+    const skill = growthSkill(skillId);
+    if (!skill) return;
+    const previousLevel = xpLevel(skillXpBefore[skillId] || 0).level;
+    const nextLevel = xpLevel((skillXpBefore[skillId] || 0) + gainedXp).level;
+    for (let level = previousLevel + 1; level <= nextLevel; level += 1) logs.push({ id: createGoalId(), type: 'level-up', levelTarget: 'skill', skillId, skillName: skill.name, level, title: `${skill.name} Lv. ${level} 달성`, lifeXp: 0, rewards: [], sourceLogId, loggedAt });
+  });
+  return logs;
 }
 function renderGrowth() {
   const life = xpLevel(lifeXp());
@@ -233,7 +287,7 @@ function renderGrowth() {
   characterSummary.innerHTML = `<div class="character-profile"><div class="profile-avatar">${profile.image ? `<img src="${profile.image}" alt="${escapeHtml(profile.name)} 프로필 사진">` : `<span>${initial}</span>`}</div><div class="profile-copy"><p class="eyebrow">MY CHARACTER</p><div class="profile-name-line"><h3>${escapeHtml(profile.name)}</h3><span>Lv. ${life.level}</span></div><p>${escapeHtml(profile.bio)}</p></div><button class="text-button edit-profile-button" type="button" id="editProfileButton">프로필 수정</button></div><div class="life-xp"><p class="eyebrow">LEVEL PROGRESS</p><div class="xp-track"><span style="width:${(life.current / life.required) * 100}%"></span></div><span>${life.current} / ${life.required} XP · 다음 레벨까지 ${life.required - life.current} XP</span></div><div class="character-total"><strong>${state.growth.logs.length}</strong><span>기록한 활동</span></div>`;
   growthDomainList.innerHTML = state.growth.domains.map((domain) => { const xp = domainXp(domain.id); const level = xpLevel(xp); const skills = state.growth.skills.filter((skill) => skill.domainId === domain.id); return `<article class="domain-growth-card domain-${domain.color}"><div class="domain-growth-top"><span class="domain-icon">${escapeHtml(domain.icon || '✦')}</span><div><p>${escapeHtml(domain.name)}</p><h4>Lv. ${level.level}</h4></div><span class="domain-xp">${xp} XP</span></div><div class="xp-track"><span style="width:${(level.current / level.required) * 100}%"></span></div><div class="skill-mini-list">${skills.length ? skills.map((skill) => { const skillLevel = xpLevel(skill.xp || 0); return `<div><span>${escapeHtml(skill.name)}</span><strong>Lv. ${skillLevel.level}</strong></div>`; }).join('') : '<p>아직 스킬이 없어요.</p>'}</div></article>`; }).join('');
   growthActivityList.innerHTML = state.growth.activities.length ? state.growth.activities.map((activity) => `<article class="activity-quick-card"><div><h4>${escapeHtml(activity.name)}</h4><p>캐릭터 +${activity.lifeXp} XP · ${rewardSummary(activity.rewards)}</p></div><button class="upload-button" type="button" data-log-activity="${activity.id}">기록</button></article>`).join('') : '<div class="growth-empty">성장 설정에서 첫 활동을 만들어보세요.</div>';
-  const logRow = (log) => `<div class="growth-log"><span>✦</span><div><strong>${escapeHtml(log.title)}</strong><p>${rewardSummary(log.rewards)} · 캐릭터 +${log.lifeXp} XP</p></div><time>${relativeLogTime(log.loggedAt)}</time><button class="delete-growth-log" type="button" data-delete-growth-log="${log.id}" title="성장 기록 삭제" aria-label="${escapeHtml(log.title)} 성장 기록 삭제">×</button></div>`;
+  const logRow = (log) => { const isLevelUp = log.type === 'level-up'; const detail = isLevelUp ? (log.levelTarget === 'life' ? '캐릭터가 새로운 레벨에 도달했어요.' : '스킬이 새로운 레벨에 도달했어요.') : `${rewardSummary(log.rewards)} · 캐릭터 +${log.lifeXp} XP`; return `<div class="growth-log ${isLevelUp ? 'growth-level-log' : ''}"><span>${isLevelUp ? '↑' : '✦'}</span><div><strong>${escapeHtml(log.title)}</strong><p>${detail}</p></div><time>${relativeLogTime(log.loggedAt)}</time>${isLevelUp ? '' : `<button class="delete-growth-log" type="button" data-delete-growth-log="${log.id}" title="성장 기록 삭제" aria-label="${escapeHtml(log.title)} 성장 기록 삭제">×</button>`}</div>`; };
   const todayKey = seoulDayKey();
   growthLogList.innerHTML = state.growth.logs.length ? state.growth.logs.slice(0, 6).map((log) => logRow(log)).join('') : '<div class="growth-empty">첫 활동을 기록하면 성장 이야기가 쌓여요.</div>';
   const todayLogs = state.growth.logs.filter((log) => seoulDayKey(log.loggedAt) === todayKey);
@@ -365,8 +419,8 @@ $('#familyContributionForm').addEventListener('submit', (event) => { event.preve
 $('#familyTradeForm').addEventListener('submit', (event) => { event.preventDefault(); const account = activeFamilyAccount(); const symbol = $('#familyTradeSymbol').value; const type = $('#familyTradeType').value; const shares = investmentNumber($('#familyTradeShares').value); const price = investmentNumber($('#familyTradePrice').value); const amount = shares * price; const holding = account.holdings[symbol]; if (!holding || !shares || !price) return; if (type === 'buy' && amount > investmentNumber(account.cash)) { alert('예수금이 부족해요. 먼저 적립금을 기록해주세요.'); return; } if (type === 'sell' && shares > investmentNumber(holding.shares)) { alert('현재 보유 수량보다 많이 매도할 수 없어요.'); return; } if (type === 'buy') { holding.averagePrice = (investmentNumber(holding.shares) * investmentNumber(holding.averagePrice) + amount) / (investmentNumber(holding.shares) + shares); holding.shares = investmentNumber(holding.shares) + shares; account.cash = investmentNumber(account.cash) - amount; } else { holding.shares = investmentNumber(holding.shares) - shares; account.cash = investmentNumber(account.cash) + amount; if (!holding.shares) holding.averagePrice = 0; } holding.currentPrice = price; const date = $('#familyTradeDate').value; account.trades.unshift({ id: createGoalId(), date, symbol, type, shares, price, amount, note: $('#familyTradeNote').value.trim() }); snapshotFamilyAccount(account, `${date}T12:00:00`); persist(); render(); $('#familyTradeDialog').close(); });
 document.querySelectorAll('[data-character-tab]').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('[data-character-tab]').forEach((item) => item.classList.toggle('is-active', item === tab)); document.querySelectorAll('[data-character-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.characterPanel === tab.dataset.characterTab)); }));
 characterSummary.addEventListener('click', (event) => { if (event.target.closest('#editProfileButton')) openProfileDialog(); });
-growthActivityList.addEventListener('click', (event) => { const button = event.target.closest('[data-log-activity]'); if (!button) return; const activity = state.growth.activities.find((item) => item.id === button.dataset.logActivity); if (!activity) return; const rewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '삭제된 스킬' })); rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = (skill.xp || 0) + (Number(reward.xp) || 0); }); state.growth.logs.unshift({ id: createGoalId(), title: activity.name, lifeXp: Number(activity.lifeXp) || 0, rewards, loggedAt: new Date().toISOString() }); persist(); render(); showGrowthToast(activity); });
-function deleteGrowthLog(logId) { const index = state.growth.logs.findIndex((log) => log.id === logId); if (index < 0) return; const log = state.growth.logs[index]; if (!confirm(`“${log.title}” 성장 기록을 삭제할까요?\n이 기록으로 얻은 경험치도 함께 되돌려집니다.`)) return; log.rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = Math.max(0, (skill.xp || 0) - (Number(reward.xp) || 0)); }); state.growth.logs.splice(index, 1); persist(); render(); }
+growthActivityList.addEventListener('click', (event) => { const button = event.target.closest('[data-log-activity]'); if (!button) return; const activity = state.growth.activities.find((item) => item.id === button.dataset.logActivity); if (!activity) return; const loggedAt = new Date().toISOString(); const sourceLogId = createGoalId(); const lifeXpBefore = lifeXp(); const skillXpBefore = Object.fromEntries(state.growth.skills.map((skill) => [skill.id, skill.xp || 0])); const rewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '삭제된 스킬' })); const levelLogs = levelUpLogsForActivity(activity, sourceLogId, loggedAt, lifeXpBefore, skillXpBefore); rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = (skill.xp || 0) + (Number(reward.xp) || 0); }); const activityLog = { id: sourceLogId, type: 'activity', title: activity.name, lifeXp: Number(activity.lifeXp) || 0, rewards, loggedAt }; state.growth.logs.unshift(...levelLogs, activityLog); persist(); render(); showGrowthToast(`${activity.name} 완료!`, `캐릭터 <b>+${Number(activity.lifeXp) || 0} XP</b>${rewards.length ? ` · ${rewardSummary(rewards)}` : ''}`); levelLogs.forEach((log) => showGrowthToast(log.title, log.levelTarget === 'life' ? '캐릭터 레벨업!' : '스킬 레벨업!', log.levelTarget === 'life' ? 'life-level-up' : 'level-up')); });
+function deleteGrowthLog(logId) { const log = state.growth.logs.find((item) => item.id === logId); if (!log || log.type === 'level-up') return; if (!confirm(`“${log.title}” 성장 기록을 삭제할까요?\n이 기록으로 얻은 경험치와 연결된 레벨업 기록도 함께 되돌려집니다.`)) return; log.rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = Math.max(0, (skill.xp || 0) - (Number(reward.xp) || 0)); }); state.growth.logs = state.growth.logs.filter((item) => item.id !== logId && item.sourceLogId !== logId); persist(); render(); }
 [growthLogList, todayActivityLogList].forEach((list) => list.addEventListener('click', (event) => { const button = event.target.closest('[data-delete-growth-log]'); if (button) deleteGrowthLog(button.dataset.deleteGrowthLog); }));
 $('#addDomainButton').addEventListener('click', () => openDomainDialog());
 $('#addSkillButton').addEventListener('click', () => { if (!state.growth.domains.length) { alert('먼저 영역을 하나 만들어주세요.'); return; } openSkillDialog(); });
