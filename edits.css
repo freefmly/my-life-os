@@ -146,6 +146,7 @@ dialog .milestone-option input { display: inline-block; width: auto; margin: 3px
 .growth-toast-stack .growth-toast.is-level-up { border-color: rgba(229, 241, 122, .8); background: #183c30; }
 .growth-level-log > span { color: #a1b33e; font-weight: 800; }
 .growth-log-action-spacer { flex: 0 0 25px; width: 25px; height: 25px; }
+.strategy-link { display: inline-flex; align-items: center; gap: 4px; align-self: center; color: var(--green); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }.strategy-link:hover { color: #60731f; text-decoration: underline; text-underline-offset: 3px; }.strategy-link span { font-size: 14px; line-height: 1; }
 @media (max-width: 800px) { .growth-toast-stack { top: 14px; right: 16px; width: min(360px, calc(100vw - 32px)); } }
 
 #vrFlowField[hidden] { display: none !important; }
