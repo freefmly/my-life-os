@@ -1,0 +1,2 @@
+[functions.daily-investment-snapshots]
+verify_jwt = false
