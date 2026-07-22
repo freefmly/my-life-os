@@ -275,7 +275,7 @@
         <label>플랫폼 <span class="optional-label">선택</span><input id="contentPlatform" maxlength="50" placeholder="네이버웹툰, Steam, Netflix 등" /></label>
         <label>상태<select id="contentStatus"><option value="active">즐기는 중</option><option value="paused">잠시 보류</option><option value="finished">완료</option><option value="wishlist">나중에</option></select></label>
         <label class="private-content-option"><input id="contentPrivate" type="checkbox" /><span><strong>비밀 자료함에 보관</strong><small>일반 콘텐츠 목록에서는 숨겨지고, PIN을 입력해야 볼 수 있어요.</small></span></label>
-        <label>현재 지점 · 스포일러 기준 <span class="optional-label">선택</span><input id="contentProgress" maxlength="80" placeholder="예: 42화까지 · 시즌 2, 3화까지" /></label>
+        <label>현재 지점 <span class="optional-label">선택</span><input id="contentProgress" inputmode="numeric" maxlength="80" placeholder="예: 42 또는 42화까지" /></label><p id="contentProgressHint" class="content-progress-hint" hidden></p>
         <label>업데이트/기억할 날 <span class="optional-label">선택</span><input id="contentUpdateDay" maxlength="30" placeholder="예: 매주 화요일" /></label>
         <label>표지 이미지 <span class="optional-label">선택 · 1.5MB 이하</span><input id="contentCover" type="file" accept="image/*" /></label>
         <label>표지 이미지 URL <span class="optional-label">선택</span><input id="contentCoverUrl" type="url" placeholder="https://example.com/cover.jpg" /></label>
