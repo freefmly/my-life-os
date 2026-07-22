@@ -370,14 +370,14 @@ function loreGraphMarkup(content) {
   const lines = items.flatMap((item) => parentsOf.get(item.id).map((parentId) => {
     const from = positions.get(parentId);
     const to = positions.get(item.id);
-    return from && to ? `<path class="lore-graph-line" d="M ${from.x + nodeWidth / 2} ${from.y + nodeHeight} V ${to.y - 20} H ${to.x + nodeWidth / 2} V ${to.y}" />` : '';
+    return from && to ? `<path class="lore-graph-line" d="M ${from.x + nodeWidth / 2} ${from.y + nodeHeight} C ${from.x + nodeWidth / 2} ${from.y + nodeHeight + 34}, ${to.x + nodeWidth / 2} ${to.y - 34}, ${to.x + nodeWidth / 2} ${to.y}" />` : '';
   })).join('');
   const nodes = items.map((item) => {
     const position = positions.get(item.id);
     const label = escapeHtml(item.name.length > 13 ? `${item.name.slice(0, 13)}…` : item.name);
     return `<g class="lore-graph-node lore-graph-${item.type}" data-view-lore="${item.id}" role="button" tabindex="0" aria-label="${escapeHtml(item.name)} 상세 보기"><rect x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="10" /><text x="${position.x + 14}" y="${position.y + 25}" class="lore-graph-kind">${loreTypes[item.type] || '설정'}</text><text x="${position.x + 14}" y="${position.y + 48}" class="lore-graph-name">${label}</text></g>`;
   }).join('');
-  return `<div class="lore-graph-wrap"><p class="lore-graph-caption">상위 설정은 위에, 그 하위 집단과 구성원은 아래에 배치됩니다. 항목을 누르면 상세 정보를 볼 수 있어요.</p><svg class="lore-graph" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(content.title)} 세계관 관계도">${lines}${nodes}</svg></div>`;
+  return `<div class="lore-graph-wrap"><p class="lore-graph-caption">상위 설정은 위에, 그 하위 집단과 구성원은 아래에 배치됩니다. 항목을 누르면 상세 정보를 볼 수 있어요.</p><svg class="lore-graph" style="width: ${width}px" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(content.title)} 세계관 관계도">${lines}${nodes}</svg></div>`;
 }
 function renderContents() { const content = activeContent(); contentList.innerHTML = state.contents.length ? state.contents.map((item) => `<article class="content-card ${item.id === state.activeContentId ? 'is-selected' : ''}" data-select-content="${item.id}" tabindex="0" role="button">${item.cover ? `<div class="content-cover"><img src="${item.cover}" alt="${escapeHtml(item.title)} 표지" /></div>` : ''}<div class="content-card-body"><div class="content-card-top"><span class="content-type">${contentTypes[item.type] || '콘텐츠'}</span><span class="content-status ${item.status || 'active'}">${contentStatuses[item.status] || '즐기는 중'}</span></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.platform || '플랫폼 미입력')}</p>${contentProgressMarkup(item)}${item.updateDay ? `<small>${escapeHtml(item.updateDay)}</small>` : ''}</div><div class="content-card-actions"><button class="text-button" type="button" data-edit-content="${item.id}">수정</button><button class="text-button danger-button" type="button" data-delete-content="${item.id}">삭제</button></div></article>`).join('') : '<div class="content-empty">아직 기록한 콘텐츠가 없어요. 웹툰, 영화, 드라마, 게임부터 가볍게 추가해보세요.</div>';
   state.contents.filter((item) => item.isPrivate).forEach((item) => contentList.querySelector(`[data-select-content="${item.id}"]`)?.remove());
