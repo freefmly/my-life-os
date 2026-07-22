@@ -279,10 +279,16 @@
         <label>이름<input id="loreName" required maxlength="80" placeholder="예: 아수라, 아서" /></label>
         <label>분류<select id="loreType"><option value="character">인물</option><option value="group">종족 · 집단</option><option value="organization">조직 · 국가</option><option value="place">장소</option><option value="term">용어 · 능력</option><option value="event">사건</option></select></label>
         <label>상위 항목 <span class="optional-label">선택</span><select id="loreParent"><option value="">최상위 설정</option></select></label>
+        <div id="loreImageFields" hidden><label>인물 사진 <span class="optional-label">선택</span><input id="loreImageFile" type="file" accept="image/*" /></label><p class="upload-note">사진은 1MB 이하의 이미지로 등록할 수 있어요.</p><label>또는 인물 사진 URL <span class="optional-label">선택</span><input id="loreImageUrl" type="url" placeholder="https://example.com/character.jpg" /></label><label class="remove-cover-option" id="removeLoreImageOption" hidden><input id="removeLoreImage" type="checkbox" /> <span>현재 인물 사진 제거</span></label></div>
         <label>스포일러 기준 <span class="optional-label">선택</span><input id="loreSpoiler" maxlength="80" placeholder="예: 42화 이후 공개 · 현재는 비워두어도 돼요" /></label>
         <label>설명 <span class="optional-label">선택</span><textarea id="loreNote" maxlength="500" placeholder="특징, 관계, 기억해둘 설정"></textarea></label>
         <menu><button class="text-button" type="button" id="cancelLoreButton">취소</button><button class="save-button" id="saveLoreButton" value="default">저장</button></menu>
       </form>
+    </dialog>
+    <dialog id="loreDetailDialog" class="lore-detail-dialog">
+      <div class="modal-top"><div><p class="eyebrow" id="loreDetailType"></p><h2 id="loreDetailTitle"></h2></div><button class="close-button" type="button" id="closeLoreDetailButton" aria-label="닫기">×</button></div>
+      <div id="loreDetailBody"></div>
+      <menu><button class="text-button" type="button" id="editLoreFromDetailButton">수정</button><button class="save-button" type="button" id="closeLoreDetailFooterButton">닫기</button></menu>
     </dialog>
 
     <dialog id="imageDialog" class="image-dialog">
