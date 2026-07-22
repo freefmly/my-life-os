@@ -2,7 +2,7 @@ const storageKey = 'my-life-mvp-v1';
 const areas = { health: '건강', finance: '재무', business: '사업', relationship: '관계', hobby: '취미' };
 let state = JSON.parse(localStorage.getItem(storageKey) || '{"vision":"","images":[],"goals":[]}');
 const paletteSize = 5;
-function normalizeState() { state.vision ||= ''; state.images = Array.isArray(state.images) ? state.images : []; state.goals = Array.isArray(state.goals) ? state.goals : []; state.achievements = Array.isArray(state.achievements) ? state.achievements : []; state.books = Array.isArray(state.books) ? state.books : []; state.people = Array.isArray(state.people) ? state.people : []; state.memories = Array.isArray(state.memories) ? state.memories.map((item) => ({ ...item, images: Array.isArray(item.images) ? item.images : [], peopleIds: Array.isArray(item.peopleIds) ? item.peopleIds : [], tags: Array.isArray(item.tags) ? item.tags : [] })) : []; state.contents = Array.isArray(state.contents) ? state.contents.map((item) => ({ ...item, lore: Array.isArray(item.lore) ? item.lore : [] })) : []; state.activeContentId = state.contents.some((item) => item.id === state.activeContentId) ? state.activeContentId : state.contents[0]?.id || null; state.activeLoreTab = ['overview', 'character', 'group', 'organization', 'place', 'term', 'event'].includes(state.activeLoreTab) ? state.activeLoreTab : 'overview'; state.businessSnapshots = Array.isArray(state.businessSnapshots) ? state.businessSnapshots : []; const defaultInvestments = createDefaultInvestments(); state.investments = { ...defaultInvestments, ...(state.investments || {}) }; state.investments.soxl = { ...defaultInvestments.soxl, ...(state.investments.soxl || {}), trades: Array.isArray(state.investments.soxl?.trades) ? state.investments.soxl.trades : [], snapshots: Array.isArray(state.investments.soxl?.snapshots) ? state.investments.soxl.snapshots : [] }; if (!Number.isFinite(state.investments.soxl.subscriptionFeeUsd) && Number.isFinite(state.investments.soxl.subscriptionFee)) state.investments.soxl.subscriptionFeeUsd = state.investments.soxl.subscriptionFee; state.investments.tqqqVr = { ...defaultInvestments.tqqqVr, ...(state.investments.tqqqVr || {}), cycles: Array.isArray(state.investments.tqqqVr?.cycles) ? state.investments.tqqqVr.cycles : [], trades: Array.isArray(state.investments.tqqqVr?.trades) ? state.investments.tqqqVr.trades : [], snapshots: Array.isArray(state.investments.tqqqVr?.snapshots) ? state.investments.tqqqVr.snapshots : [] }; normalizeFamilyAccounts(); if (!state.growth || !Array.isArray(state.growth.domains) || !Array.isArray(state.growth.skills) || !Array.isArray(state.growth.activities) || !Array.isArray(state.growth.logs)) state.growth = createDefaultGrowth(); state.growth.profile = { name: '나의 캐릭터', bio: '나만의 속도로, 더 나은 삶을 만들어가는 중.', image: '', ...(state.growth.profile || {}) }; state.goals = state.goals.map((goal, index) => ({ ...goal, colorIndex: Number.isInteger(goal.colorIndex) ? goal.colorIndex : index % paletteSize, id: goal.id || createGoalId() })); }
+function normalizeState() { state.vision ||= ''; state.images = Array.isArray(state.images) ? state.images : []; state.goals = Array.isArray(state.goals) ? state.goals : []; state.achievements = Array.isArray(state.achievements) ? state.achievements : []; state.books = Array.isArray(state.books) ? state.books : []; state.people = Array.isArray(state.people) ? state.people : []; state.memories = Array.isArray(state.memories) ? state.memories.map((item) => ({ ...item, images: Array.isArray(item.images) ? item.images : [], peopleIds: Array.isArray(item.peopleIds) ? item.peopleIds : [], tags: Array.isArray(item.tags) ? item.tags : [] })) : []; state.contents = Array.isArray(state.contents) ? state.contents.map((item) => ({ ...item, lore: Array.isArray(item.lore) ? item.lore : [] })) : []; state.activeContentId = state.contents.some((item) => item.id === state.activeContentId) ? state.activeContentId : state.contents[0]?.id || null; state.activeLoreTab = ['overview', 'character', 'group', 'organization', 'place', 'term', 'event', 'graph'].includes(state.activeLoreTab) ? state.activeLoreTab : 'overview'; state.businessSnapshots = Array.isArray(state.businessSnapshots) ? state.businessSnapshots : []; const defaultInvestments = createDefaultInvestments(); state.investments = { ...defaultInvestments, ...(state.investments || {}) }; state.investments.soxl = { ...defaultInvestments.soxl, ...(state.investments.soxl || {}), trades: Array.isArray(state.investments.soxl?.trades) ? state.investments.soxl.trades : [], snapshots: Array.isArray(state.investments.soxl?.snapshots) ? state.investments.soxl.snapshots : [] }; if (!Number.isFinite(state.investments.soxl.subscriptionFeeUsd) && Number.isFinite(state.investments.soxl.subscriptionFee)) state.investments.soxl.subscriptionFeeUsd = state.investments.soxl.subscriptionFee; normalizeFamilyAccounts(); if (!state.growth || !Array.isArray(state.growth.domains) || !Array.isArray(state.growth.skills) || !Array.isArray(state.growth.activities) || !Array.isArray(state.growth.logs)) state.growth = createDefaultGrowth(); state.growth.profile = { name: '나의 캐릭터', bio: '나만의 속도로, 더 나은 삶을 만들어가는 중.', image: '', ...(state.growth.profile || {}) }; state.goals = state.goals.map((goal, index) => ({ ...goal, colorIndex: Number.isInteger(goal.colorIndex) ? goal.colorIndex : index % paletteSize, id: goal.id || createGoalId() })); }
 normalizeState();
 function normalizeVaultState() { state.contents = (state.contents || []).map((item) => ({ ...item, isPrivate: Boolean(item.isPrivate) })); state.vaultPinHash = typeof state.vaultPinHash === 'string' ? state.vaultPinHash : ''; }
 normalizeVaultState();
@@ -333,6 +333,51 @@ function loreParentIds(item) { return [...new Set(Array.isArray(item.parentIds) 
 function contentProgressText(progress) { const value = String(progress || '').trim(); return /^\d+$/.test(value) ? `${Number(value) + 1}화 볼 차례` : value ? `현재 ${escapeHtml(value)}` : ''; }
 function contentProgressMarkup(item) { const text = contentProgressText(item.progress); if (text) return `<strong>${text}</strong>`; return ['movie', 'game'].includes(item.type) ? '' : '<strong>감상 지점을 기록해보세요</strong>'; }
 function activeContent() { return state.contents.find((item) => item.id === state.activeContentId); }
+function loreGraphMarkup(content) {
+  const items = (content.lore || []).filter((item) => ['character', 'group', 'organization'].includes(item.type));
+  if (!items.length) return '<div class="lore-empty">관계도로 볼 인물, 종족·집단, 조직·국가 설정이 아직 없어요.</div>';
+  const itemIds = new Set(items.map((item) => item.id));
+  const parentsOf = new Map(items.map((item) => [item.id, loreParentIds(item).filter((id) => itemIds.has(id))]));
+  const depths = new Map();
+  const visiting = new Set();
+  const depthOf = (id) => {
+    if (depths.has(id)) return depths.get(id);
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    const parents = parentsOf.get(id) || [];
+    const depth = parents.length ? Math.max(...parents.map(depthOf)) + 1 : 0;
+    visiting.delete(id);
+    depths.set(id, depth);
+    return depth;
+  };
+  items.forEach((item) => depthOf(item.id));
+  const levels = [];
+  items.forEach((item) => { const depth = depths.get(item.id); (levels[depth] ||= []).push(item); });
+  const nodeWidth = 184;
+  const nodeHeight = 66;
+  const gapX = 44;
+  const gapY = 66;
+  const maxColumns = Math.max(...levels.map((level) => level.length));
+  const width = Math.max(620, maxColumns * nodeWidth + Math.max(0, maxColumns - 1) * gapX + 48);
+  const height = levels.length * nodeHeight + Math.max(0, levels.length - 1) * gapY + 34;
+  const positions = new Map();
+  levels.forEach((level, depth) => {
+    const rowWidth = level.length * nodeWidth + Math.max(0, level.length - 1) * gapX;
+    const startX = (width - rowWidth) / 2;
+    level.forEach((item, index) => positions.set(item.id, { x: startX + index * (nodeWidth + gapX), y: 17 + depth * (nodeHeight + gapY) }));
+  });
+  const lines = items.flatMap((item) => parentsOf.get(item.id).map((parentId) => {
+    const from = positions.get(parentId);
+    const to = positions.get(item.id);
+    return from && to ? `<path class="lore-graph-line" d="M ${from.x + nodeWidth / 2} ${from.y + nodeHeight} V ${to.y - 20} H ${to.x + nodeWidth / 2} V ${to.y}" />` : '';
+  })).join('');
+  const nodes = items.map((item) => {
+    const position = positions.get(item.id);
+    const label = escapeHtml(item.name.length > 13 ? `${item.name.slice(0, 13)}…` : item.name);
+    return `<g class="lore-graph-node lore-graph-${item.type}" data-view-lore="${item.id}" role="button" tabindex="0" aria-label="${escapeHtml(item.name)} 상세 보기"><rect x="${position.x}" y="${position.y}" width="${nodeWidth}" height="${nodeHeight}" rx="10" /><text x="${position.x + 14}" y="${position.y + 25}" class="lore-graph-kind">${loreTypes[item.type] || '설정'}</text><text x="${position.x + 14}" y="${position.y + 48}" class="lore-graph-name">${label}</text></g>`;
+  }).join('');
+  return `<div class="lore-graph-wrap"><p class="lore-graph-caption">상위 설정은 위에, 그 하위 집단과 구성원은 아래에 배치됩니다. 항목을 누르면 상세 정보를 볼 수 있어요.</p><svg class="lore-graph" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(content.title)} 세계관 관계도">${lines}${nodes}</svg></div>`;
+}
 function renderContents() { const content = activeContent(); contentList.innerHTML = state.contents.length ? state.contents.map((item) => `<article class="content-card ${item.id === state.activeContentId ? 'is-selected' : ''}" data-select-content="${item.id}" tabindex="0" role="button">${item.cover ? `<div class="content-cover"><img src="${item.cover}" alt="${escapeHtml(item.title)} 표지" /></div>` : ''}<div class="content-card-body"><div class="content-card-top"><span class="content-type">${contentTypes[item.type] || '콘텐츠'}</span><span class="content-status ${item.status || 'active'}">${contentStatuses[item.status] || '즐기는 중'}</span></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.platform || '플랫폼 미입력')}</p>${contentProgressMarkup(item)}${item.updateDay ? `<small>${escapeHtml(item.updateDay)}</small>` : ''}</div><div class="content-card-actions"><button class="text-button" type="button" data-edit-content="${item.id}">수정</button><button class="text-button danger-button" type="button" data-delete-content="${item.id}">삭제</button></div></article>`).join('') : '<div class="content-empty">아직 기록한 콘텐츠가 없어요. 웹툰, 영화, 드라마, 게임부터 가볍게 추가해보세요.</div>';
   state.contents.filter((item) => item.isPrivate).forEach((item) => contentList.querySelector(`[data-select-content="${item.id}"]`)?.remove());
   const secretList = $('#secretVaultList');
@@ -356,6 +401,7 @@ function renderContents() { const content = activeContent(); contentList.innerHT
   $('#worldSummary').innerHTML = content.note ? `<strong>작품 메모</strong><p>${escapeHtml(content.note)}</p>` : '<p>이 작품에서 기억하고 싶은 인물, 종족, 조직, 용어를 추가해보세요.</p>';
   const loreTab = state.activeLoreTab || 'overview';
   document.querySelectorAll('[data-lore-tab]').forEach((tab) => tab.classList.toggle('is-active', tab.dataset.loreTab === loreTab));
+  if (loreTab === 'graph') { $('#loreTree').innerHTML = loreGraphMarkup(content); return; }
   const visibleLore = loreTab === 'overview' ? content.lore.slice(-4).reverse() : content.lore.filter((item) => item.type === loreTab);
   const loreCard = (item) => { const parents = loreParentIds(item).map((id) => content.lore.find((entry) => entry.id === id)).filter(Boolean); return `<article class="lore-node lore-node-flat" data-view-lore="${item.id}" tabindex="0" role="button"><div class="lore-card-main">${item.type === 'character' && item.image ? `<img class="lore-avatar" src="${item.image}" alt="${escapeHtml(item.name)} 사진" />` : ''}<div><span>${loreTypes[item.type] || '설정'}${parents.length ? ` · ${parents.map((parent) => escapeHtml(parent.name)).join(', ')} 소속` : ''}</span><h4>${escapeHtml(item.name)}</h4>${item.note ? `<p>${escapeHtml(item.note)}</p>` : ''}</div></div><div class="lore-actions"><button class="text-button" type="button" data-edit-lore="${item.id}">수정</button><button class="text-button danger-button" type="button" data-delete-lore="${item.id}">삭제</button></div></article>`; };
   if (loreTab === 'overview') { $('#loreTree').innerHTML = visibleLore.length ? `<p class="lore-overview-caption">최근 정리한 핵심 설정</p>${visibleLore.map(loreCard).join('')}` : '<div class="lore-empty">아직 세계관 설정이 없어요. ‘아수라’ 같은 종족이나 ‘아서’ 같은 인물부터 추가해보세요.</div>'; return; }
