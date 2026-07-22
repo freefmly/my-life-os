@@ -286,9 +286,11 @@
       </form>
     </dialog>
     <dialog id="loreDetailDialog" class="lore-detail-dialog">
-      <div class="modal-top"><div><p class="eyebrow" id="loreDetailType"></p><h2 id="loreDetailTitle"></h2></div><button class="close-button" type="button" id="closeLoreDetailButton" aria-label="닫기">×</button></div>
-      <div id="loreDetailBody"></div>
-      <menu><button class="text-button" type="button" id="editLoreFromDetailButton">수정</button><button class="save-button" type="button" id="closeLoreDetailFooterButton">닫기</button></menu>
+      <form method="dialog" id="loreDetailForm">
+        <div class="modal-top"><div><p class="eyebrow" id="loreDetailType"></p><h2 id="loreDetailTitle"></h2></div><button class="close-button" type="button" id="closeLoreDetailButton" aria-label="닫기">×</button></div>
+        <div id="loreDetailBody"></div>
+        <menu><button class="text-button" type="button" id="editLoreFromDetailButton">수정</button><button class="save-button" type="button" id="closeLoreDetailFooterButton">닫기</button></menu>
+      </form>
     </dialog>
 
     <dialog id="imageDialog" class="image-dialog">
