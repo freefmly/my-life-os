@@ -24,3 +24,15 @@ create policy "Users can update their own life state"
   on public.life_app_states for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Memory photos: a private bucket, with each user limited to their own folder.
+-- The app stores a long-lived signed URL inside its RLS-protected app state.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('memory-images', 'memory-images', false, 6291456, array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic'])
+on conflict (id) do update set public = false, file_size_limit = 6291456;
+
+drop policy if exists "Users manage their memory images" on storage.objects;
+create policy "Users manage their memory images"
+  on storage.objects for all
+  using (bucket_id = 'memory-images' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'memory-images' and (storage.foldername(name))[1] = auth.uid()::text);
