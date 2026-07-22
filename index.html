@@ -29,6 +29,7 @@
           <button type="button" class="nav-item" data-nav-view="business"><span>▣</span> 사업</button>
           <button type="button" class="nav-item" data-nav-view="investment"><span>◒</span> 투자</button>
           <button type="button" class="nav-item" data-nav-view="library"><span>▤</span> 내 서재</button>
+          <button type="button" class="nav-item" data-nav-view="contents"><span>✧</span> 콘텐츠 &amp; 취미</button>
         </nav>
         <div class="sidebar-footer"><div class="auth-status" data-auth-status>로컬 모드</div><button class="auth-button" type="button" data-auth-button>로그인 · 동기화</button><p class="sidebar-note">나의 삶을, 한 걸음씩.</p></div>
       </aside>
@@ -120,6 +121,26 @@
         <p class="library-intro">읽고 싶은 책부터 완독한 책까지, 나만의 읽기 여정을 모아보세요.</p>
         <div id="libraryList" class="library-list"></div>
       </section>
+      </section>
+
+      <section class="app-view" data-view-panel="contents">
+        <section class="contents-section">
+          <div class="section-heading"><div><p class="eyebrow">CONTENT &amp; HOBBIES</p><h2>즐기는 이야기와 세계</h2></div><button class="upload-button" type="button" id="addContentButton"><span>＋</span> 콘텐츠 추가</button></div>
+          <p class="contents-intro">보고, 플레이하고, 나중에 다시 꺼내볼 작품들을 한곳에 기록하세요. 현재 감상 지점과 세계관은 작품별로 분리되어 저장됩니다.</p>
+          <div class="content-collection-tabs" role="tablist" aria-label="콘텐츠 목록"><button class="content-collection-tab is-active" type="button" data-content-collection="main">내 콘텐츠</button><button class="content-collection-tab" type="button" data-content-collection="vault">🔒 비밀 자료함</button></div>
+          <div id="contentList" class="content-list"></div>
+          <section id="secretVaultSection" class="secret-vault-section">
+            <div class="secret-vault-heading"><div><p class="eyebrow">PRIVATE COLLECTION</p><h3>비밀 자료함</h3><p>일반 목록에서는 보이지 않는 개인 콘텐츠를 보관합니다.</p></div><div class="secret-vault-actions"><button class="upload-button" type="button" id="openSecretVaultButton"><span>🔒</span> 자료함 열기</button><button class="text-button" type="button" id="lockSecretVaultButton" hidden>잠그기</button></div></div>
+            <div id="secretVaultLocked" class="secret-vault-locked"><span>🔒</span><p>PIN을 입력하면 비밀 콘텐츠와 관련 세계관을 확인할 수 있어요.</p></div>
+            <div id="secretVaultList" class="content-list" hidden></div>
+          </section>
+          <section id="worldSection" class="world-section" hidden>
+            <div class="world-heading"><div><p class="eyebrow">WORLD GUIDE</p><h3 id="worldTitle"></h3><p id="worldProgress"></p></div><button class="upload-button" type="button" id="addLoreButton"><span>＋</span> 설정 추가</button></div>
+            <div id="worldSummary" class="world-summary"></div>
+            <div class="world-tabs" role="tablist" aria-label="세계관 분류"><button class="world-tab is-active" type="button" data-lore-tab="overview">개요</button><button class="world-tab" type="button" data-lore-tab="character">인물</button><button class="world-tab" type="button" data-lore-tab="group">종족 · 집단</button><button class="world-tab" type="button" data-lore-tab="organization">조직 · 국가</button><button class="world-tab" type="button" data-lore-tab="place">장소</button><button class="world-tab" type="button" data-lore-tab="term">용어 · 능력</button><button class="world-tab" type="button" data-lore-tab="event">사건</button></div>
+            <div id="loreTree" class="lore-tree"></div>
+          </section>
+        </section>
       </section>
 
       <section class="app-view" data-view-panel="business">
@@ -223,6 +244,44 @@
         <p class="upload-note">파일을 함께 선택한 경우에는 업로드한 파일이 우선 적용돼요.</p>
         <label class="remove-cover-option" id="removeCoverOption" hidden><input id="bookRemoveCover" type="checkbox" /> <span>기존 표지 이미지 제거</span></label>
         <menu><button class="text-button" type="button" id="cancelBookButton">취소</button><button class="save-button" type="submit" id="saveBookButton">책 저장</button></menu>
+      </form>
+    </dialog>
+    <dialog id="contentDialog">
+      <form method="dialog" id="contentForm">
+        <div class="modal-top"><div><p class="eyebrow" id="contentDialogEyebrow">NEW CONTENT</p><h2 id="contentDialogTitle">새 콘텐츠를 기록해요.</h2></div><button class="close-button" type="button" id="closeContentButton" aria-label="닫기">×</button></div>
+        <label>제목<input id="contentTitle" required maxlength="80" placeholder="예: 끝이 아닌 시작" /></label>
+        <label>종류<select id="contentType"><option value="webtoon">웹툰</option><option value="movie">영화</option><option value="drama">드라마</option><option value="game">게임</option><option value="novel">소설 · 웹소설</option><option value="other">기타</option></select></label>
+        <label>플랫폼 <span class="optional-label">선택</span><input id="contentPlatform" maxlength="50" placeholder="네이버웹툰, Steam, Netflix 등" /></label>
+        <label>상태<select id="contentStatus"><option value="active">즐기는 중</option><option value="paused">잠시 보류</option><option value="finished">완료</option><option value="wishlist">나중에</option></select></label>
+        <label class="private-content-option"><input id="contentPrivate" type="checkbox" /><span><strong>비밀 자료함에 보관</strong><small>일반 콘텐츠 목록에서는 숨겨지고, PIN을 입력해야 볼 수 있어요.</small></span></label>
+        <label>현재 지점 · 스포일러 기준 <span class="optional-label">선택</span><input id="contentProgress" maxlength="80" placeholder="예: 42화까지 · 시즌 2, 3화까지" /></label>
+        <label>업데이트/기억할 날 <span class="optional-label">선택</span><input id="contentUpdateDay" maxlength="30" placeholder="예: 매주 화요일" /></label>
+        <label>표지 이미지 <span class="optional-label">선택 · 1.5MB 이하</span><input id="contentCover" type="file" accept="image/*" /></label>
+        <label>표지 이미지 URL <span class="optional-label">선택</span><input id="contentCoverUrl" type="url" placeholder="https://example.com/cover.jpg" /></label>
+        <label id="removeContentCoverOption" class="remove-cover-option" hidden><input id="contentRemoveCover" type="checkbox" /><span>현재 표지 이미지 제거</span></label>
+        <label>짧은 메모 <span class="optional-label">선택</span><textarea id="contentNote" maxlength="300" placeholder="왜 좋아하는지, 다음에 볼 것 등"></textarea></label>
+        <menu><button class="text-button" type="button" id="cancelContentButton">취소</button><button class="save-button" id="saveContentButton" value="default">저장</button></menu>
+      </form>
+    </dialog>
+    <dialog id="secretVaultDialog">
+      <form method="dialog" id="secretVaultForm">
+        <div class="modal-top"><div><p class="eyebrow" id="secretVaultEyebrow">PRIVATE COLLECTION</p><h2 id="secretVaultTitle">비밀 자료함 열기</h2></div><button class="close-button" type="button" id="closeSecretVaultButton" aria-label="닫기">×</button></div>
+        <p class="vault-dialog-intro" id="secretVaultIntro">PIN을 입력하면 이 브라우저에서 잠시 자료함을 열 수 있어요.</p>
+        <label>PIN <input id="secretVaultPin" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="12" required placeholder="4~12자리 숫자" /></label>
+        <label id="secretVaultConfirmLabel">PIN 확인 <input id="secretVaultPinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="12" placeholder="PIN을 한 번 더 입력" /></label>
+        <p id="secretVaultMessage" class="auth-message"></p>
+        <menu><button class="text-button" type="button" id="cancelSecretVaultButton">취소</button><button class="save-button" id="saveSecretVaultButton" value="default">잠금 설정</button></menu>
+      </form>
+    </dialog>
+    <dialog id="loreDialog">
+      <form method="dialog" id="loreForm">
+        <div class="modal-top"><div><p class="eyebrow" id="loreDialogEyebrow">NEW WORLD NOTE</p><h2 id="loreDialogTitle">세계관 설정을 추가해요.</h2></div><button class="close-button" type="button" id="closeLoreButton" aria-label="닫기">×</button></div>
+        <label>이름<input id="loreName" required maxlength="80" placeholder="예: 아수라, 아서" /></label>
+        <label>분류<select id="loreType"><option value="character">인물</option><option value="group">종족 · 집단</option><option value="organization">조직 · 국가</option><option value="place">장소</option><option value="term">용어 · 능력</option><option value="event">사건</option></select></label>
+        <label>상위 항목 <span class="optional-label">선택</span><select id="loreParent"><option value="">최상위 설정</option></select></label>
+        <label>스포일러 기준 <span class="optional-label">선택</span><input id="loreSpoiler" maxlength="80" placeholder="예: 42화 이후 공개 · 현재는 비워두어도 돼요" /></label>
+        <label>설명 <span class="optional-label">선택</span><textarea id="loreNote" maxlength="500" placeholder="특징, 관계, 기억해둘 설정"></textarea></label>
+        <menu><button class="text-button" type="button" id="cancelLoreButton">취소</button><button class="save-button" id="saveLoreButton" value="default">저장</button></menu>
       </form>
     </dialog>
 
