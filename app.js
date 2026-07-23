@@ -534,10 +534,7 @@ function knowledgeReferenceEntries() {
   return [
     ...state.growth.domains.map((item) => ({ key: `domain:${item.id}`, kind: 'domain', label: item.name })),
     ...state.growth.skills.map((item) => ({ key: `skill:${item.id}`, kind: 'skill', label: item.name })),
-    ...state.books.map((item) => ({ key: `book:${item.id}`, kind: 'book', label: item.title })),
-    ...state.contents.filter((item) => !item.isPrivate).map((item) => ({ key: `content:${item.id}`, kind: 'content', label: item.title })),
-    ...state.memories.map((item) => ({ key: `memory:${item.id}`, kind: 'memory', label: item.title })),
-    ...state.people.map((item) => ({ key: `person:${item.id}`, kind: 'person', label: item.name }))
+    ...state.memories.map((item) => ({ key: `memory:${item.id}`, kind: 'memory', label: item.title }))
   ];
 }
 function knowledgeNodeLabel(text) { const value = String(text || ''); return escapeHtml(value.length > 16 ? `${value.slice(0, 16)}…` : value); }
