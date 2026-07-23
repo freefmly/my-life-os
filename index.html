@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260718-2" />
-    <link rel="stylesheet" href="edits.css?v=20260723-22" />
+    <link rel="stylesheet" href="edits.css?v=20260723-23" />
   </head>
   <body>
     <div id="growthToastStack" class="growth-toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -36,7 +36,7 @@
           <button type="button" class="nav-item" data-nav-view="memories"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/></svg> 추억</button>
           <button type="button" class="nav-item" data-nav-view="people"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3 3 0 0 1 0 5.8M16.5 14.5a4.7 4.7 0 0 1 4 4.5"/></svg> 사람들</button>
         </nav>
-        <div class="sidebar-footer"><div class="auth-status" data-auth-status>로컬 모드</div><button class="auth-button" type="button" data-auth-button>로그인 · 동기화</button><p class="sidebar-note">나의 삶을, 한 걸음씩.</p></div>
+        <div class="sidebar-footer"><div class="auth-status" data-auth-status>로컬 모드</div><button class="auth-button" type="button" data-auth-button>로그인 · 동기화</button><button class="backup-button" type="button" data-backup-button>백업 · 복원</button><p class="sidebar-note">나의 삶을, 한 걸음씩.</p></div>
       </aside>
       <main class="app-shell">
       <header class="topbar">
@@ -235,7 +235,7 @@
         </section>
       </section>
       </main>
-      <footer class="mobile-auth-footer"><div class="auth-status" data-auth-status>로컬 모드</div><button class="auth-button" type="button" data-auth-button>로그인 · 동기화</button></footer>
+      <footer class="mobile-auth-footer"><div class="auth-status" data-auth-status>로컬 모드</div><button class="auth-button" type="button" data-auth-button>로그인 · 동기화</button><button class="backup-button" type="button" data-backup-button>백업 · 복원</button></footer>
     </div>
 
     <dialog id="goalDialog">
@@ -286,6 +286,8 @@
         <menu><button class="text-button danger-button" type="button" id="deleteKnowledgeButton" hidden>삭제</button><button class="text-button" type="button" id="cancelKnowledgeButton">취소</button><button class="save-button" type="submit">저장</button></menu>
       </form>
     </dialog>
+
+    <dialog id="backupDialog"><form method="dialog" id="backupForm"><div class="modal-top"><div><p class="eyebrow">PORTABLE BACKUP</p><h2>백업 · 복원</h2></div><button class="close-button" type="button" id="closeBackupButton" aria-label="닫기">×</button></div><p class="backup-intro">백업 파일에는 현재 기록과 지식 연결을 담습니다. 로그인 후 올린 추억 사진도 파일 안에 포함해, Supabase 없이 복원할 수 있도록 준비합니다.</p><section class="backup-action"><h3>전체 백업</h3><p>JSON 파일 하나를 다운로드합니다. 사진이 많으면 조금 시간이 걸릴 수 있어요.</p><button class="save-button" type="button" id="exportBackupButton">전체 백업 다운로드</button></section><section class="backup-action"><h3>백업 복원</h3><p>복원하면 현재 브라우저의 모든 기록을 백업 파일 내용으로 바꿉니다.</p><input id="importBackupFile" type="file" accept="application/json,.json" /><button class="text-button danger-button" type="button" id="importBackupButton">백업 파일 복원</button></section><p id="backupMessage" class="auth-message"></p><menu><button class="text-button" type="button" id="cancelBackupButton">닫기</button></menu></form></dialog>
 
     <dialog id="knowledgeDetailDialog" class="knowledge-detail-dialog">
       <form method="dialog"><div class="modal-top"><div><p class="eyebrow" id="knowledgeDetailMeta">KNOWLEDGE</p><h2 id="knowledgeDetailTitle"></h2></div><button class="close-button" type="button" id="closeKnowledgeDetailButton" aria-label="닫기">×</button></div><div id="knowledgeDetailBody"></div><menu><button class="text-button danger-button" type="button" id="deleteKnowledgeFromDetailButton">삭제</button><button class="text-button" type="button" id="editKnowledgeFromDetailButton">수정</button><button class="save-button" type="button" id="closeKnowledgeDetailFooterButton">닫기</button></menu></form>
@@ -367,6 +369,6 @@
     <dialog id="familyContributionDialog"><form method="dialog" id="familyContributionForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyContributionTitle">적립금 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyContributionDialog" aria-label="닫기">×</button></div><p class="auth-intro">새로 들어온 돈을 기록하면 누적 적립금과 예수금에 반영됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>적립일<input id="familyContributionDate" type="date" required /></label><label>적립금 (USD)<input id="familyContributionAmount" type="number" min="0.01" step="0.01" required /></label></div><label>메모<textarea id="familyContributionNote" maxlength="180" placeholder="예: 이번 달 준우 용돈 적립"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyContributionDialog">취소</button><button class="save-button" type="submit">적립금 저장</button></menu></form></dialog>
     <dialog id="familyTradeDialog"><form method="dialog" id="familyTradeForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyTradeTitle">매수·매도 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyTradeDialog" aria-label="닫기">×</button></div><p class="auth-intro">매수하면 예수금과 평균 매수가가 자동으로 갱신됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>거래일<input id="familyTradeDate" type="date" required /></label><label>종목<select id="familyTradeSymbol"></select></label><label>구분<select id="familyTradeType"><option value="buy">매수</option><option value="sell">매도</option></select></label><label>수량<input id="familyTradeShares" type="number" min="0.0001" step="0.0001" required /></label><label>매수가 / 매도가 (USD)<input id="familyTradePrice" type="number" min="0.0001" step="0.0001" required /></label></div><label>메모<textarea id="familyTradeNote" maxlength="180" placeholder="예: 적립금으로 QLD 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyTradeDialog">취소</button><button class="save-button" type="submit">거래 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="app.js?v=20260723-25"></script>
+    <script src="app.js?v=20260723-26"></script>
   </body>
 </html>
