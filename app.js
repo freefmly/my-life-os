@@ -533,8 +533,7 @@ const knowledgeKinds = { knowledge: '지식', domain: '영역', skill: '스킬',
 function knowledgeReferenceEntries() {
   return [
     ...state.growth.domains.map((item) => ({ key: `domain:${item.id}`, kind: 'domain', label: item.name })),
-    ...state.growth.skills.map((item) => ({ key: `skill:${item.id}`, kind: 'skill', label: item.name })),
-    ...state.memories.map((item) => ({ key: `memory:${item.id}`, kind: 'memory', label: item.title }))
+    ...state.growth.skills.map((item) => ({ key: `skill:${item.id}`, kind: 'skill', label: item.name }))
   ];
 }
 function knowledgeNodeLabel(text) { const value = String(text || ''); return escapeHtml(value.length > 16 ? `${value.slice(0, 16)}…` : value); }
