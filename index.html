@@ -42,7 +42,6 @@
       <header class="topbar">
         <p class="mobile-brand">my life</p>
         <p id="today" class="today"></p>
-        <button class="text-button" id="resetButton" type="button">처음부터</button>
       </header>
 
       <section class="app-view is-active" data-view-panel="today">
@@ -132,7 +131,7 @@
         <section class="knowledge-section">
           <div class="section-heading"><div><p class="eyebrow">KNOWLEDGE GARDEN</p><h2>지식</h2></div><button class="upload-button" type="button" id="addKnowledgeButton"><span>＋</span> 지식 추가</button></div>
           <p class="contents-intro">짧은 생각을 남기고, 서로와 삶의 기록을 연결해 나만의 지식 지도를 만드세요.</p>
-          <div class="knowledge-layout"><section class="knowledge-graph-card"><div class="knowledge-graph-heading"><div><h3>연결 지도</h3><p id="knowledgeGraphCaption"></p></div><button class="text-button" type="button" id="clearKnowledgeSelection" hidden>선택 해제</button></div><div id="knowledgeGraph" class="knowledge-graph"></div></section><section class="knowledge-list-panel"><div class="knowledge-list-toolbar"><input id="knowledgeSearch" type="search" maxlength="80" placeholder="지식과 태그 검색" /><span id="knowledgeCount" class="hint"></span></div><div id="knowledgeList" class="knowledge-list"></div></section></div>
+          <section class="knowledge-graph-card"><div class="knowledge-graph-heading"><div><h3>연결 지도</h3><p id="knowledgeGraphCaption"></p></div><div class="knowledge-search-bar"><input id="knowledgeSearch" type="search" maxlength="80" placeholder="지식과 태그 검색" /><span id="knowledgeCount" class="hint"></span><button class="text-button" type="button" id="randomKnowledgeButton">랜덤 노트</button><button class="text-button" type="button" id="clearKnowledgeSelection" hidden>선택 해제</button></div></div><div id="knowledgeGraph" class="knowledge-graph"></div></section>
         </section>
       </section>
 
@@ -286,6 +285,10 @@
         <fieldset class="knowledge-links-field"><legend>연결할 지식 <span>선택</span></legend><p>서로 연결될 생각을 골라주세요.</p><div id="knowledgeCardOptions" class="knowledge-reference-options"></div></fieldset>
         <menu><button class="text-button danger-button" type="button" id="deleteKnowledgeButton" hidden>삭제</button><button class="text-button" type="button" id="cancelKnowledgeButton">취소</button><button class="save-button" type="submit">저장</button></menu>
       </form>
+    </dialog>
+
+    <dialog id="knowledgeDetailDialog" class="knowledge-detail-dialog">
+      <form method="dialog"><div class="modal-top"><div><p class="eyebrow" id="knowledgeDetailMeta">KNOWLEDGE</p><h2 id="knowledgeDetailTitle"></h2></div><button class="close-button" type="button" id="closeKnowledgeDetailButton" aria-label="닫기">×</button></div><div id="knowledgeDetailBody"></div><menu><button class="text-button danger-button" type="button" id="deleteKnowledgeFromDetailButton">삭제</button><button class="text-button" type="button" id="editKnowledgeFromDetailButton">수정</button><button class="save-button" type="button" id="closeKnowledgeDetailFooterButton">닫기</button></menu></form>
     </dialog>
 
     <dialog id="contentDialog">
