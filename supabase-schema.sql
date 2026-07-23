@@ -9,6 +9,20 @@ create table if not exists public.life_app_states (
 
 alter table public.life_app_states enable row level security;
 
+-- Deliver changes from another phone, PC, or browser to already-open sessions.
+-- The existence check keeps this script safe to run more than once.
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'life_app_states'
+  ) then
+    alter publication supabase_realtime add table public.life_app_states;
+  end if;
+end $$;
+
 drop policy if exists "Users can read their own life state" on public.life_app_states;
 create policy "Users can read their own life state"
   on public.life_app_states for select

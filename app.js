@@ -26,6 +26,12 @@ const supabaseClient = window.supabase?.createClient ? window.supabase.createCli
 let signedInUser = null;
 let isLoadingCloudState = false;
 let cloudSaveTimer = null;
+let cloudStateLoadPromise = null;
+let cloudSavePromise = null;
+let cloudChannel = null;
+let cloudLastSyncedState = null;
+let cloudHasLocalChanges = false;
+let cloudRetryCount = 0;
 const visionInput = $('#visionInput');
 const board = $('#visionBoard');
 const goalList = $('#goalList');
@@ -82,7 +88,47 @@ let marketQuoteRefreshPromise = null;
 let tqqqChartRange = 'day';
 let familyChartRange = 'day';
 
-function persist() { localStorage.setItem(storageKey, JSON.stringify(state)); if (signedInUser && !isLoadingCloudState) { clearTimeout(cloudSaveTimer); cloudSaveTimer = setTimeout(saveCloudState, 700); } }
+function cloneCloudState(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
+function cloudValuesEqual(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
+function isCloudObject(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+function cloudRecordKey(entry) { if (!isCloudObject(entry)) return ''; return ['id', 'date', 'month'].map((key) => entry[key]).find((value) => typeof value === 'string' && value) || ''; }
+function cloudArrayHasRecordKeys(...arrays) { const entries = arrays.filter(Array.isArray).flat(); return entries.length > 0 && entries.every((entry) => cloudRecordKey(entry)); }
+function mergeCloudValue(base, local, remote) {
+  const missing = Symbol('missing');
+  const merge = (baseValue, localValue, remoteValue) => {
+    const equal = (left, right) => left === missing || right === missing ? left === right : cloudValuesEqual(left, right);
+    const localChanged = !equal(localValue, baseValue);
+    const remoteChanged = !equal(remoteValue, baseValue);
+    if (!localChanged) return remoteValue === missing ? missing : cloneCloudState(remoteValue);
+    if (!remoteChanged) return localValue === missing ? missing : cloneCloudState(localValue);
+    if (localValue === missing) return remoteValue === missing ? missing : cloneCloudState(remoteValue);
+    if (remoteValue === missing) return cloneCloudState(localValue);
+    if (Array.isArray(localValue) && Array.isArray(remoteValue) && cloudArrayHasRecordKeys(baseValue, localValue, remoteValue)) {
+      const baseById = new Map((Array.isArray(baseValue) ? baseValue : []).map((item) => [cloudRecordKey(item), item]));
+      const localById = new Map(localValue.map((item) => [cloudRecordKey(item), item]));
+      const remoteById = new Map(remoteValue.map((item) => [cloudRecordKey(item), item]));
+      const order = [...localValue, ...remoteValue].map(cloudRecordKey).filter((id, index, ids) => ids.indexOf(id) === index);
+      return order.map((id) => {
+        const value = merge(baseById.get(id) ?? missing, localById.get(id) ?? missing, remoteById.get(id) ?? missing);
+        return value === missing ? null : value;
+      }).filter(Boolean);
+    }
+    if (isCloudObject(localValue) && isCloudObject(remoteValue)) {
+      const result = {};
+      const keys = new Set([...Object.keys(isCloudObject(baseValue) ? baseValue : {}), ...Object.keys(localValue), ...Object.keys(remoteValue)]);
+      keys.forEach((key) => {
+        const value = merge(baseValue?.[key] ?? missing, localValue[key] ?? missing, remoteValue[key] ?? missing);
+        if (value !== missing) result[key] = value;
+      });
+      return result;
+    }
+    // Both devices changed the same indivisible value. Keep this device's edit; it will be published to every device.
+    return cloneCloudState(localValue);
+  };
+  return merge(base ?? {}, local ?? {}, remote ?? {});
+}
+function scheduleCloudSave(delay = 700) { if (!signedInUser || isLoadingCloudState) return; clearTimeout(cloudSaveTimer); cloudSaveTimer = setTimeout(() => { saveCloudState(); }, delay); }
+function persist() { localStorage.setItem(storageKey, JSON.stringify(state)); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); } }
 function escapeHtml(text) { const el = document.createElement('div'); el.textContent = text; return el.innerHTML; }
 function formatDate(value) { if (!value) return '언젠가'; const [year, month] = value.split('-'); return `${year}.${month}`; }
 function formatNumber(value) { return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value); }
@@ -326,7 +372,7 @@ function openActivityDialog(id = null) { editingActivityId = id; const activity 
 function openProfileDialog() { const profile = state.growth.profile; $('#profileForm').reset(); $('#profileName').value = profile.name || ''; $('#profileBio').value = profile.bio || ''; if (/^https?:\/\//.test(profile.image || '')) $('#profileImageUrl').value = profile.image; $('#removeProfileImageOption').hidden = !profile.image; profileDialog.showModal(); $('#profileName').focus(); }
 function mergeDailySnapshotRecords(remoteRecords, localRecords) { const merged = new Map(); dailySoxlSnapshots(Array.isArray(remoteRecords) ? remoteRecords : []).forEach((record) => merged.set(String(record.date).slice(0, 10), record)); dailySoxlSnapshots(Array.isArray(localRecords) ? localRecords : []).forEach((record) => merged.set(String(record.date).slice(0, 10), record)); return [...merged.values()]; }
 function preserveRemoteInvestmentSnapshots(remoteState) { const remoteInvestments = remoteState?.investments; if (!remoteInvestments) return; const localInvestments = state.investments; const remoteVr = remoteInvestments.tqqqVr || {}; localInvestments.tqqqVr.snapshots = mergeDailySnapshotRecords(remoteVr.snapshots, localInvestments.tqqqVr.snapshots); Object.keys(localInvestments.familyAccounts || {}).forEach((accountId) => { const localAccount = localInvestments.familyAccounts[accountId]; const remoteAccount = remoteInvestments.familyAccounts?.[accountId]; if (localAccount && remoteAccount) localAccount.snapshots = mergeDailySnapshotRecords(remoteAccount.snapshots, localAccount.snapshots); }); }
-function updateAuthUI(message = '') { const status = signedInUser ? signedInUser.email || '동기화됨' : message || '로컬 모드'; const buttonLabel = signedInUser ? '로그아웃' : '로그인 · 동기화'; authStatuses.forEach((element) => { element.textContent = status; }); authButtons.forEach((button) => { button.textContent = buttonLabel; }); }
+function updateAuthUI(message = '') { const status = message || (signedInUser ? signedInUser.email || '동기화됨' : '로컬 모드'); const buttonLabel = signedInUser ? '로그아웃' : '로그인 · 동기화'; authStatuses.forEach((element) => { element.textContent = status; }); authButtons.forEach((button) => { button.textContent = buttonLabel; }); }
 const contentTypes = { webtoon: '웹툰', movie: '영화', drama: '드라마', game: '게임', novel: '소설 · 웹소설', other: '기타' };
 const contentStatuses = { active: '즐기는 중', paused: '잠시 보류', finished: '완료', wishlist: '나중에' };
 const loreTypes = { character: '인물', group: '종족 · 집단', organization: '조직 · 국가', place: '장소', term: '용어 · 능력', event: '사건' };
@@ -412,9 +458,115 @@ function renderContents() { const content = activeContent(); contentList.innerHT
   $('#loreTree').innerHTML = roots.length ? roots.map(branch).join('') : `<div class="lore-empty">아직 ${loreTypes[loreTab]} 설정이 없어요.</div>`;
   return;
 }
-async function saveCloudState() { if (!supabaseClient || !signedInUser) return; const { data: remote, error: loadError } = await supabaseClient.from('life_app_states').select('data').eq('user_id', signedInUser.id).maybeSingle(); if (!loadError && remote?.data) preserveRemoteInvestmentSnapshots(remote.data); const { error } = await supabaseClient.from('life_app_states').upsert({ user_id: signedInUser.id, data: state, updated_at: new Date().toISOString() }); if (error) { console.error(error); updateAuthUI('동기화 오류'); } else updateAuthUI('동기화됨'); }
-async function loadCloudState() { if (!supabaseClient || !signedInUser) return; updateAuthUI('동기화 중…'); const { data, error } = await supabaseClient.from('life_app_states').select('data').eq('user_id', signedInUser.id).maybeSingle(); if (error) { console.error(error); updateAuthUI('설정 필요'); return; } if (data?.data && Object.keys(data.data).length) { isLoadingCloudState = true; state = data.data; normalizeState(); const migratedLegacyUrls = normalizeMemoryStorageState(); localStorage.setItem(storageKey, JSON.stringify(state)); render(); isLoadingCloudState = false; if (migratedLegacyUrls) await saveCloudState(); } else await saveCloudState(); updateAuthUI('동기화됨'); }
-async function applySession(session) { signedInUser = session?.user || null; updateAuthUI(); if (signedInUser) await loadCloudState(); }
+function applyCloudState(nextState, message = '동기화됨') { state = cloneCloudState(nextState || {}); normalizeState(); normalizeVaultState(); localStorage.setItem(storageKey, JSON.stringify(state)); render(); updateAuthUI(message); }
+function unsubscribeCloudState() { if (cloudChannel && supabaseClient) supabaseClient.removeChannel(cloudChannel); cloudChannel = null; }
+function receiveCloudState(remoteState) {
+  if (!signedInUser || !remoteState || typeof remoteState !== 'object') return;
+  const base = cloudLastSyncedState || {};
+  const merged = cloudHasLocalChanges ? mergeCloudValue(base, state, remoteState) : cloneCloudState(remoteState);
+  cloudLastSyncedState = cloneCloudState(remoteState);
+  const hasUnpublishedChanges = !cloudValuesEqual(merged, remoteState);
+  cloudHasLocalChanges = hasUnpublishedChanges;
+  applyCloudState(merged, hasUnpublishedChanges ? '다른 기기 변경 병합 중…' : '동기화됨');
+  if (hasUnpublishedChanges) scheduleCloudSave(100);
+}
+function subscribeToCloudState() {
+  if (!supabaseClient || !signedInUser) return;
+  unsubscribeCloudState();
+  const userId = signedInUser.id;
+  cloudChannel = supabaseClient.channel(`life-state-${userId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'life_app_states', filter: `user_id=eq.${userId}` }, (payload) => {
+      if (payload.eventType !== 'DELETE' && payload.new?.data) receiveCloudState(payload.new.data);
+    })
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') updateAuthUI('실시간 연결 재시도 중…');
+    });
+}
+async function saveCloudState() {
+  if (!supabaseClient || !signedInUser || isLoadingCloudState) return cloudSavePromise;
+  if (cloudSavePromise) return cloudSavePromise;
+  clearTimeout(cloudSaveTimer);
+  const userId = signedInUser.id;
+  cloudSavePromise = (async () => {
+    try {
+      const { data: remoteRow, error: loadError } = await supabaseClient.from('life_app_states').select('data').eq('user_id', userId).maybeSingle();
+      if (loadError) throw loadError;
+      if (userId !== signedInUser?.id) return;
+      const remoteState = remoteRow?.data || {};
+      state = mergeCloudValue(cloudLastSyncedState || {}, state, remoteState);
+      normalizeState();
+      normalizeVaultState();
+      localStorage.setItem(storageKey, JSON.stringify(state));
+      const payload = cloneCloudState(state);
+      const { error } = await supabaseClient.from('life_app_states').upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      cloudLastSyncedState = payload;
+      cloudRetryCount = 0;
+      cloudHasLocalChanges = !cloudValuesEqual(state, payload);
+      updateAuthUI(cloudHasLocalChanges ? '동기화 중…' : '동기화됨');
+      if (cloudHasLocalChanges) scheduleCloudSave(100);
+    } catch (error) {
+      console.error(error);
+      cloudHasLocalChanges = true;
+      cloudRetryCount = Math.min(cloudRetryCount + 1, 6);
+      updateAuthUI('동기화 재시도 대기 중');
+      scheduleCloudSave(Math.min(30000, 1000 * (2 ** cloudRetryCount)));
+    } finally {
+      cloudSavePromise = null;
+    }
+  })();
+  return cloudSavePromise;
+}
+async function loadCloudState() {
+  if (!supabaseClient || !signedInUser) return;
+  if (cloudStateLoadPromise) return cloudStateLoadPromise;
+  const userId = signedInUser.id;
+  cloudStateLoadPromise = (async () => {
+    isLoadingCloudState = true;
+    clearTimeout(cloudSaveTimer);
+    updateAuthUI('동기화 중…');
+    try {
+      let result;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        result = await supabaseClient.from('life_app_states').select('data').eq('user_id', userId).maybeSingle();
+        if (!result.error) break;
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900 * (attempt + 1)));
+      }
+      const { data, error } = result || {};
+      if (error) throw error;
+      if (userId !== signedInUser?.id) return;
+      if (data?.data && Object.keys(data.data).length) {
+        cloudLastSyncedState = cloneCloudState(data.data);
+        cloudHasLocalChanges = false;
+        applyCloudState(data.data);
+      } else {
+        cloudLastSyncedState = {};
+        cloudHasLocalChanges = true;
+      }
+      subscribeToCloudState();
+    } catch (error) {
+      console.error(error);
+      updateAuthUI('동기화 연결 실패');
+    } finally {
+      isLoadingCloudState = false;
+      cloudStateLoadPromise = null;
+    }
+    if (cloudHasLocalChanges) scheduleCloudSave(0);
+  })();
+  return cloudStateLoadPromise;
+}
+async function applySession(session) {
+  const nextUser = session?.user || null;
+  if ((nextUser?.id || null) !== (signedInUser?.id || null)) {
+    unsubscribeCloudState();
+    cloudLastSyncedState = null;
+    cloudHasLocalChanges = false;
+    clearTimeout(cloudSaveTimer);
+  }
+  signedInUser = nextUser;
+  updateAuthUI();
+  if (signedInUser) await loadCloudState();
+}
 async function initializeCloudSync() { if (!supabaseClient) { updateAuthUI('연결 불가'); return; } const { data } = await supabaseClient.auth.getSession(); await applySession(data.session); supabaseClient.auth.onAuthStateChange((_event, session) => { if ((session?.user?.id || null) !== (signedInUser?.id || null)) setTimeout(() => applySession(session), 0); }); }
 function render() {
   normalizeVaultState();
@@ -579,7 +731,13 @@ $('#familyContributionForm').addEventListener('submit', (event) => { event.preve
 $('#familyTradeForm').addEventListener('submit', (event) => { event.preventDefault(); const account = activeFamilyAccount(); const symbol = $('#familyTradeSymbol').value; const type = $('#familyTradeType').value; const shares = investmentNumber($('#familyTradeShares').value); const price = investmentNumber($('#familyTradePrice').value); const amount = shares * price; const holding = account.holdings[symbol]; if (!holding || !shares || !price) return; if (type === 'buy' && amount > investmentNumber(account.cash)) { alert('예수금이 부족해요. 먼저 적립금을 기록해주세요.'); return; } if (type === 'sell' && shares > investmentNumber(holding.shares)) { alert('현재 보유 수량보다 많이 매도할 수 없어요.'); return; } if (type === 'buy') { holding.averagePrice = (investmentNumber(holding.shares) * investmentNumber(holding.averagePrice) + amount) / (investmentNumber(holding.shares) + shares); holding.shares = investmentNumber(holding.shares) + shares; account.cash = investmentNumber(account.cash) - amount; } else { holding.shares = investmentNumber(holding.shares) - shares; account.cash = investmentNumber(account.cash) + amount; if (!holding.shares) holding.averagePrice = 0; } holding.currentPrice = price; const date = $('#familyTradeDate').value; account.trades.unshift({ id: createGoalId(), date, symbol, type, shares, price, amount, note: $('#familyTradeNote').value.trim() }); snapshotFamilyAccount(account, `${date}T12:00:00`); persist(); render(); $('#familyTradeDialog').close(); });
 document.querySelectorAll('[data-character-tab]').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('[data-character-tab]').forEach((item) => item.classList.toggle('is-active', item === tab)); document.querySelectorAll('[data-character-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.characterPanel === tab.dataset.characterTab)); }));
 characterSummary.addEventListener('click', (event) => { if (event.target.closest('#editProfileButton')) openProfileDialog(); });
-growthActivityList.addEventListener('click', (event) => { const button = event.target.closest('[data-log-activity]'); if (!button) return; const activity = state.growth.activities.find((item) => item.id === button.dataset.logActivity); if (!activity) return; const loggedAt = new Date().toISOString(); const sourceLogId = createGoalId(); const lifeXpBefore = lifeXp(); const skillXpBefore = Object.fromEntries(state.growth.skills.map((skill) => [skill.id, skill.xp || 0])); const rewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '삭제된 스킬' })); const levelLogs = levelUpLogsForActivity(activity, sourceLogId, loggedAt, lifeXpBefore, skillXpBefore); rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = (skill.xp || 0) + (Number(reward.xp) || 0); }); const activityLog = { id: sourceLogId, type: 'activity', title: activity.name, lifeXp: Number(activity.lifeXp) || 0, rewards, loggedAt }; state.growth.logs.unshift(...levelLogs, activityLog); persist(); render(); showGrowthToast(`${activity.name} 완료!`, `캐릭터 <b>+${Number(activity.lifeXp) || 0} XP</b>${rewards.length ? ` · ${rewardSummary(rewards)}` : ''}`); levelLogs.forEach((log) => showGrowthToast(log.title, log.levelTarget === 'life' ? '캐릭터 레벨업!' : '스킬 레벨업!', log.levelTarget === 'life' ? 'life-level-up' : 'level-up')); });
+function logGrowthActivity(activityId) { const activity = state.growth.activities.find((item) => item.id === activityId); if (!activity) return; const loggedAt = new Date().toISOString(); const sourceLogId = createGoalId(); const lifeXpBefore = lifeXp(); const skillXpBefore = Object.fromEntries(state.growth.skills.map((skill) => [skill.id, skill.xp || 0])); const rewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '삭제된 스킬' })); const levelLogs = levelUpLogsForActivity(activity, sourceLogId, loggedAt, lifeXpBefore, skillXpBefore); rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = (skill.xp || 0) + (Number(reward.xp) || 0); }); const activityLog = { id: sourceLogId, type: 'activity', title: activity.name, lifeXp: Number(activity.lifeXp) || 0, rewards, loggedAt }; state.growth.logs.unshift(...levelLogs, activityLog); persist(); render(); showGrowthToast(`${activity.name} 완료!`, `캐릭터 <b>+${Number(activity.lifeXp) || 0} XP</b>${rewards.length ? ` · ${rewardSummary(rewards)}` : ''}`); levelLogs.forEach((log) => showGrowthToast(log.title, log.levelTarget === 'life' ? '캐릭터 레벨업!' : '스킬 레벨업!', log.levelTarget === 'life' ? 'life-level-up' : 'level-up')); }
+let activityTouchMoved = false;
+let lastActivityTouchAt = 0;
+growthActivityList.addEventListener('touchstart', () => { activityTouchMoved = false; }, { passive: true });
+growthActivityList.addEventListener('touchmove', () => { activityTouchMoved = true; }, { passive: true });
+growthActivityList.addEventListener('touchend', (event) => { const button = event.target.closest('[data-log-activity]'); if (!button || activityTouchMoved) return; lastActivityTouchAt = Date.now(); event.preventDefault(); logGrowthActivity(button.dataset.logActivity); });
+growthActivityList.addEventListener('click', (event) => { const button = event.target.closest('[data-log-activity]'); if (!button || Date.now() - lastActivityTouchAt < 700) return; logGrowthActivity(button.dataset.logActivity); });
 function deleteGrowthLog(logId) { const log = state.growth.logs.find((item) => item.id === logId); if (!log || log.type === 'level-up') return; if (!confirm(`“${log.title}” 성장 기록을 삭제할까요?\n이 기록으로 얻은 경험치와 연결된 레벨업 기록도 함께 되돌려집니다.`)) return; log.rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = Math.max(0, (skill.xp || 0) - (Number(reward.xp) || 0)); }); state.growth.logs = state.growth.logs.filter((item) => item.id !== logId && item.sourceLogId !== logId); persist(); render(); }
 [growthLogList, todayActivityLogList].forEach((list) => list.addEventListener('click', (event) => { const button = event.target.closest('[data-delete-growth-log]'); if (button) deleteGrowthLog(button.dataset.deleteGrowthLog); }));
 $('#addDomainButton').addEventListener('click', () => openDomainDialog());
@@ -672,6 +830,8 @@ ensureUsdKrwRate().then(renderInvestments, renderInvestments);
 refreshMarketQuotes();
 window.setInterval(() => { if (document.querySelector('[data-view-panel="investment"]')?.classList.contains('is-active')) refreshMarketQuotes(); }, 5000);
 window.setInterval(() => { memoryImageUrlCache.clear(); refreshMemoryImageUrls(); }, 240000);
+window.setInterval(() => { if (signedInUser && !cloudHasLocalChanges && !cloudSavePromise) loadCloudState(); }, 30000);
+window.addEventListener('pagehide', () => { if (signedInUser && cloudHasLocalChanges) saveCloudState(); });
 setupPullToRefresh();
 setActiveView(location.hash.slice(1) || localStorage.getItem('my-life-active-view') || 'today', false);
 initializeCloudSync();
