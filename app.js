@@ -1,10 +1,15 @@
 const storageKey = 'my-life-mvp-v1';
 const areas = { health: '건강', finance: '재무', business: '사업', relationship: '관계', hobby: '취미' };
 let state = JSON.parse(localStorage.getItem(storageKey) || '{"vision":"","images":[],"goals":[]}');
+function safelyStoreLocal(key, value) { try { localStorage.setItem(key, value); return true; } catch (error) { console.warn(`Local storage write failed for ${key}; cloud sync will continue.`, error); return false; } }
+function storeLocalState() { return safelyStoreLocal(storageKey, JSON.stringify(state)); }
 const paletteSize = 5;
 function normalizeState() { state.vision ||= ''; state.images = Array.isArray(state.images) ? state.images : []; state.goals = Array.isArray(state.goals) ? state.goals : []; state.achievements = Array.isArray(state.achievements) ? state.achievements : []; state.books = Array.isArray(state.books) ? state.books : []; state.people = Array.isArray(state.people) ? state.people : []; state.memories = Array.isArray(state.memories) ? state.memories.map((item) => ({ ...item, images: Array.isArray(item.images) ? item.images : [], peopleIds: Array.isArray(item.peopleIds) ? item.peopleIds : [], tags: Array.isArray(item.tags) ? item.tags : [] })) : []; state.contents = Array.isArray(state.contents) ? state.contents.map((item) => ({ ...item, lore: Array.isArray(item.lore) ? item.lore : [] })) : []; state.activeContentId = state.contents.some((item) => item.id === state.activeContentId) ? state.activeContentId : state.contents[0]?.id || null; state.activeLoreTab = ['overview', 'character', 'group', 'organization', 'place', 'term', 'event', 'graph'].includes(state.activeLoreTab) ? state.activeLoreTab : 'overview'; state.businessSnapshots = Array.isArray(state.businessSnapshots) ? state.businessSnapshots : []; const defaultInvestments = createDefaultInvestments(); state.investments = { ...defaultInvestments, ...(state.investments || {}) }; state.investments.soxl = { ...defaultInvestments.soxl, ...(state.investments.soxl || {}), trades: Array.isArray(state.investments.soxl?.trades) ? state.investments.soxl.trades : [], snapshots: Array.isArray(state.investments.soxl?.snapshots) ? state.investments.soxl.snapshots : [] }; if (!Number.isFinite(state.investments.soxl.subscriptionFeeUsd) && Number.isFinite(state.investments.soxl.subscriptionFee)) state.investments.soxl.subscriptionFeeUsd = state.investments.soxl.subscriptionFee; normalizeFamilyAccounts(); if (!state.growth || !Array.isArray(state.growth.domains) || !Array.isArray(state.growth.skills) || !Array.isArray(state.growth.activities) || !Array.isArray(state.growth.logs)) state.growth = createDefaultGrowth(); state.growth.profile = { name: '나의 캐릭터', bio: '나만의 속도로, 더 나은 삶을 만들어가는 중.', image: '', ...(state.growth.profile || {}) }; state.goals = state.goals.map((goal, index) => ({ ...goal, colorIndex: Number.isInteger(goal.colorIndex) ? goal.colorIndex : index % paletteSize, id: goal.id || createGoalId() })); }
 normalizeState();
-if (normalizeMemoryStorageState()) localStorage.setItem(storageKey, JSON.stringify(state));
+if (normalizeMemoryStorageState()) storeLocalState();
+const localStateBeforeCloudLoad = JSON.parse(JSON.stringify(state));
+function hasMeaningfulNonInvestmentData(value) { return Boolean(value?.vision || value?.images?.length || value?.goals?.length || value?.achievements?.length || value?.books?.length || value?.people?.length || value?.memories?.length || value?.contents?.length || value?.businessSnapshots?.length || value?.growth?.logs?.length); }
+function migrateLocalDataToEmptyCloud(remoteState) { if (!hasMeaningfulNonInvestmentData(localStateBeforeCloudLoad) || hasMeaningfulNonInvestmentData(remoteState)) return remoteState; const localNonInvestment = JSON.parse(JSON.stringify(localStateBeforeCloudLoad)); delete localNonInvestment.investments; return { ...remoteState, ...localNonInvestment, investments: remoteState.investments || localStateBeforeCloudLoad.investments }; }
 function normalizeVaultState() { state.contents = (state.contents || []).map((item) => ({ ...item, isPrivate: Boolean(item.isPrivate) })); state.vaultPinHash = typeof state.vaultPinHash === 'string' ? state.vaultPinHash : ''; }
 normalizeVaultState();
 state.investments.tqqqVr.trades = Array.isArray(state.investments.tqqqVr.trades) ? state.investments.tqqqVr.trades : [];
@@ -29,7 +34,6 @@ let cloudSaveTimer = null;
 let cloudStateLoadPromise = null;
 let cloudSavePromise = null;
 let cloudChannel = null;
-let cloudLastSyncedState = null;
 let cloudHasLocalChanges = false;
 let cloudRetryCount = 0;
 const visionInput = $('#visionInput');
@@ -90,45 +94,8 @@ let familyChartRange = 'day';
 
 function cloneCloudState(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
 function cloudValuesEqual(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
-function isCloudObject(value) { return value && typeof value === 'object' && !Array.isArray(value); }
-function cloudRecordKey(entry) { if (!isCloudObject(entry)) return ''; return ['id', 'date', 'month'].map((key) => entry[key]).find((value) => typeof value === 'string' && value) || ''; }
-function cloudArrayHasRecordKeys(...arrays) { const entries = arrays.filter(Array.isArray).flat(); return entries.length > 0 && entries.every((entry) => cloudRecordKey(entry)); }
-function mergeCloudValue(base, local, remote) {
-  const missing = Symbol('missing');
-  const merge = (baseValue, localValue, remoteValue) => {
-    const equal = (left, right) => left === missing || right === missing ? left === right : cloudValuesEqual(left, right);
-    const localChanged = !equal(localValue, baseValue);
-    const remoteChanged = !equal(remoteValue, baseValue);
-    if (!localChanged) return remoteValue === missing ? missing : cloneCloudState(remoteValue);
-    if (!remoteChanged) return localValue === missing ? missing : cloneCloudState(localValue);
-    if (localValue === missing) return remoteValue === missing ? missing : cloneCloudState(remoteValue);
-    if (remoteValue === missing) return cloneCloudState(localValue);
-    if (Array.isArray(localValue) && Array.isArray(remoteValue) && cloudArrayHasRecordKeys(baseValue, localValue, remoteValue)) {
-      const baseById = new Map((Array.isArray(baseValue) ? baseValue : []).map((item) => [cloudRecordKey(item), item]));
-      const localById = new Map(localValue.map((item) => [cloudRecordKey(item), item]));
-      const remoteById = new Map(remoteValue.map((item) => [cloudRecordKey(item), item]));
-      const order = [...localValue, ...remoteValue].map(cloudRecordKey).filter((id, index, ids) => ids.indexOf(id) === index);
-      return order.map((id) => {
-        const value = merge(baseById.get(id) ?? missing, localById.get(id) ?? missing, remoteById.get(id) ?? missing);
-        return value === missing ? null : value;
-      }).filter(Boolean);
-    }
-    if (isCloudObject(localValue) && isCloudObject(remoteValue)) {
-      const result = {};
-      const keys = new Set([...Object.keys(isCloudObject(baseValue) ? baseValue : {}), ...Object.keys(localValue), ...Object.keys(remoteValue)]);
-      keys.forEach((key) => {
-        const value = merge(baseValue?.[key] ?? missing, localValue[key] ?? missing, remoteValue[key] ?? missing);
-        if (value !== missing) result[key] = value;
-      });
-      return result;
-    }
-    // Both devices changed the same indivisible value. Keep this device's edit; it will be published to every device.
-    return cloneCloudState(localValue);
-  };
-  return merge(base ?? {}, local ?? {}, remote ?? {});
-}
 function scheduleCloudSave(delay = 700) { if (!signedInUser || isLoadingCloudState) return; clearTimeout(cloudSaveTimer); cloudSaveTimer = setTimeout(() => { saveCloudState(); }, delay); }
-function persist() { localStorage.setItem(storageKey, JSON.stringify(state)); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); } }
+function persist() { storeLocalState(); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); } }
 function escapeHtml(text) { const el = document.createElement('div'); el.textContent = text; return el.innerHTML; }
 function formatDate(value) { if (!value) return '언젠가'; const [year, month] = value.split('-'); return `${year}.${month}`; }
 function formatNumber(value) { return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value); }
@@ -458,17 +425,12 @@ function renderContents() { const content = activeContent(); contentList.innerHT
   $('#loreTree').innerHTML = roots.length ? roots.map(branch).join('') : `<div class="lore-empty">아직 ${loreTypes[loreTab]} 설정이 없어요.</div>`;
   return;
 }
-function applyCloudState(nextState, message = '동기화됨') { state = cloneCloudState(nextState || {}); normalizeState(); normalizeVaultState(); localStorage.setItem(storageKey, JSON.stringify(state)); render(); updateAuthUI(message); }
+function applyCloudState(nextState, message = '동기화됨') { state = cloneCloudState(nextState || {}); normalizeState(); normalizeVaultState(); storeLocalState(); render(); updateAuthUI(message); }
 function unsubscribeCloudState() { if (cloudChannel && supabaseClient) supabaseClient.removeChannel(cloudChannel); cloudChannel = null; }
 function receiveCloudState(remoteState) {
   if (!signedInUser || !remoteState || typeof remoteState !== 'object') return;
-  const base = cloudLastSyncedState || {};
-  const merged = cloudHasLocalChanges ? mergeCloudValue(base, state, remoteState) : cloneCloudState(remoteState);
-  cloudLastSyncedState = cloneCloudState(remoteState);
-  const hasUnpublishedChanges = !cloudValuesEqual(merged, remoteState);
-  cloudHasLocalChanges = hasUnpublishedChanges;
-  applyCloudState(merged, hasUnpublishedChanges ? '다른 기기 변경 병합 중…' : '동기화됨');
-  if (hasUnpublishedChanges) scheduleCloudSave(100);
+  if (cloudHasLocalChanges) return;
+  applyCloudState(remoteState, '다른 기기 변경 반영됨');
 }
 function subscribeToCloudState() {
   if (!supabaseClient || !signedInUser) return;
@@ -489,18 +451,9 @@ async function saveCloudState() {
   const userId = signedInUser.id;
   cloudSavePromise = (async () => {
     try {
-      const { data: remoteRow, error: loadError } = await supabaseClient.from('life_app_states').select('data').eq('user_id', userId).maybeSingle();
-      if (loadError) throw loadError;
-      if (userId !== signedInUser?.id) return;
-      const remoteState = remoteRow?.data || {};
-      state = mergeCloudValue(cloudLastSyncedState || {}, state, remoteState);
-      normalizeState();
-      normalizeVaultState();
-      localStorage.setItem(storageKey, JSON.stringify(state));
       const payload = cloneCloudState(state);
       const { error } = await supabaseClient.from('life_app_states').upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() });
       if (error) throw error;
-      cloudLastSyncedState = payload;
       cloudRetryCount = 0;
       cloudHasLocalChanges = !cloudValuesEqual(state, payload);
       updateAuthUI(cloudHasLocalChanges ? '동기화 중…' : '동기화됨');
@@ -536,11 +489,12 @@ async function loadCloudState() {
       if (error) throw error;
       if (userId !== signedInUser?.id) return;
       if (data?.data && Object.keys(data.data).length) {
-        cloudLastSyncedState = cloneCloudState(data.data);
-        cloudHasLocalChanges = false;
-        applyCloudState(data.data);
+        const serverState = migrateLocalDataToEmptyCloud(data.data);
+        const migratedLocalData = !cloudValuesEqual(serverState, data.data);
+        cloudHasLocalChanges = migratedLocalData;
+        applyCloudState(serverState, migratedLocalData ? '이 기기의 기존 데이터를 서버로 이관 중…' : '동기화됨');
       } else {
-        cloudLastSyncedState = {};
+        applyCloudState(localStateBeforeCloudLoad);
         cloudHasLocalChanges = true;
       }
       subscribeToCloudState();
@@ -559,7 +513,6 @@ async function applySession(session) {
   const nextUser = session?.user || null;
   if ((nextUser?.id || null) !== (signedInUser?.id || null)) {
     unsubscribeCloudState();
-    cloudLastSyncedState = null;
     cloudHasLocalChanges = false;
     clearTimeout(cloudSaveTimer);
   }
@@ -758,7 +711,7 @@ async function submitAuth(mode) { if (!supabaseClient) return; const email = $('
 $('#authForm').addEventListener('submit', async (event) => { event.preventDefault(); await submitAuth('signin'); });
 $('#signUpButton').addEventListener('click', async () => { await submitAuth('signup'); });
 $('#resetButton').addEventListener('click', () => { if (!confirm('입력한 비전, 사진, 목표, 업적, 책, 콘텐츠, 추억, 사람들, 사업, 투자 기록을 모두 지울까요?')) return; state = { vision: '', images: [], goals: [], achievements: [], books: [], memories: [], people: [], contents: [], activeContentId: null, businessSnapshots: [], investments: createDefaultInvestments(), growth: createDefaultGrowth() }; persist(); render(); });
-function setActiveView(view, writeHash = true) { const allowedViews = ['today', 'character', 'goals', 'business', 'investment', 'library', 'contents', 'memories', 'people']; const activeView = allowedViews.includes(view) ? view : 'today'; document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.viewPanel === activeView)); document.querySelectorAll('.main-nav [data-nav-view]').forEach((button) => button.classList.toggle('is-active', button.dataset.navView === activeView)); localStorage.setItem('my-life-active-view', activeView); if (writeHash && location.hash !== `#${activeView}`) location.hash = activeView; if (activeView === 'investment') refreshMarketQuotes(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function setActiveView(view, writeHash = true) { const allowedViews = ['today', 'character', 'goals', 'business', 'investment', 'library', 'contents', 'memories', 'people']; const activeView = allowedViews.includes(view) ? view : 'today'; document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.viewPanel === activeView)); document.querySelectorAll('.main-nav [data-nav-view]').forEach((button) => button.classList.toggle('is-active', button.dataset.navView === activeView)); safelyStoreLocal('my-life-active-view', activeView); if (writeHash && location.hash !== `#${activeView}`) location.hash = activeView; if (activeView === 'investment') refreshMarketQuotes(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function setupPullToRefresh() { if (!window.matchMedia('(pointer: coarse)').matches) return; const threshold = 78; let startY = 0; let distance = 0; let tracking = false; const reset = () => { tracking = false; distance = 0; pullToRefresh.classList.remove('is-visible', 'is-ready', 'is-loading'); }; document.addEventListener('touchstart', (event) => { if (window.scrollY > 0 || event.touches.length !== 1) return; startY = event.touches[0].clientY; distance = 0; tracking = true; }, { passive: true }); document.addEventListener('touchmove', (event) => { if (!tracking || event.touches.length !== 1) return; const nextDistance = event.touches[0].clientY - startY; if (nextDistance <= 0 || window.scrollY > 0) { reset(); return; } distance = Math.min(nextDistance, 118); const ready = distance >= threshold; pullToRefresh.classList.add('is-visible'); pullToRefresh.classList.toggle('is-ready', ready); pullToRefreshText.textContent = ready ? '놓으면 새로고침' : '당겨서 새로고침'; if (distance > 8) event.preventDefault(); }, { passive: false }); const finish = () => { if (!tracking) return; const shouldRefresh = distance >= threshold; if (!shouldRefresh) { reset(); return; } tracking = false; pullToRefresh.classList.add('is-loading'); pullToRefreshText.textContent = '새로고침 중…'; window.setTimeout(() => window.location.reload(), 160); }; document.addEventListener('touchend', finish, { passive: true }); document.addEventListener('touchcancel', reset, { passive: true }); }
 document.addEventListener('click', (event) => { const navigation = event.target.closest('[data-nav-view]'); if (!navigation) return; setActiveView(navigation.dataset.navView); });
 document.addEventListener('pointerover', (event) => { const dot = event.target.closest('.performance-dot[data-chart-tooltip]'); if (dot) showInvestmentChartTooltip(dot); });
