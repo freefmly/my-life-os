@@ -50,7 +50,7 @@
 .shelf-heading:hover { background: #f7f9f3; }.shelf-heading:focus-visible { outline: 2px solid var(--green); outline-offset: -3px; }
 .shelf-heading-title { display: flex; align-items: baseline; gap: 9px; }.shelf-heading h3 { font-size: 16px; letter-spacing: -.5px; margin: 0; }.shelf-heading small { color: var(--muted); font-size: 12px; }.shelf-toggle-icon { color: var(--green); font-size: 19px; line-height: 1; transition: transform .18s ease; }.library-shelf.is-expanded .shelf-toggle-icon { transform: rotate(180deg); }
 .book-gallery { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 17px 14px; border-top: 1px solid var(--line); padding: 17px; }
-.book-card { position: relative; min-width: 0; cursor: pointer; }
+.book-card { position: relative; min-width: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .book-card:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 .book-cover { display: grid; place-items: center; aspect-ratio: 2 / 3; overflow: hidden; background: var(--green); box-shadow: 3px 4px 0 rgba(38,53,46,.14); }
 .book-card:nth-child(3n+2) .book-cover { background: #be8c6c; }.book-card:nth-child(3n+3) .book-cover { background: #637d9c; }
