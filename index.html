@@ -291,9 +291,7 @@
     <dialog id="knowledgeDialog">
       <form method="dialog" id="knowledgeForm">
         <div class="modal-top"><div><p class="eyebrow" id="knowledgeDialogEyebrow">NEW KNOWLEDGE</p><h2 id="knowledgeDialogTitle">생각 한 조각을 남겨요.</h2></div><button class="close-button" type="button" id="closeKnowledgeButton" aria-label="닫기">×</button></div>
-        <label>제목<input id="knowledgeTitle" required maxlength="100" placeholder="예: 중요한 일은 반복 가능한 구조로 만든다" /></label>
-        <label>내용 <span class="optional-label">선택</span><textarea id="knowledgeBody" maxlength="2000" placeholder="내 생각, 배운 점, 나중에 확인할 질문을 자유롭게 적어보세요."></textarea></label>
-        <label>태그 <span class="optional-label">선택</span><input id="knowledgeTags" maxlength="160" placeholder="사업, 습관, 투자 (쉼표로 구분)" /></label>
+        <label>생각<textarea id="knowledgeContent" required maxlength="2000" placeholder="떠오른 생각을 그대로 적어보세요. 제목이나 태그로 나눌 필요가 없어요."></textarea></label>
         <fieldset class="knowledge-links-field"><legend>연결할 영역 <span>선택</span></legend><div id="knowledgeDomainOptions" class="knowledge-reference-options"></div></fieldset>
         <fieldset class="knowledge-links-field"><legend>연결할 스킬 <span>선택</span></legend><div id="knowledgeSkillOptions" class="knowledge-reference-options"></div></fieldset>
         <fieldset class="knowledge-links-field"><legend>연결할 책 <span>선택</span></legend><div id="knowledgeBookOptions" class="knowledge-reference-options"></div></fieldset>
@@ -384,6 +382,6 @@
     <dialog id="familyContributionDialog"><form method="dialog" id="familyContributionForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyContributionTitle">적립금 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyContributionDialog" aria-label="닫기">×</button></div><p class="auth-intro">새로 들어온 돈을 기록하면 누적 적립금과 예수금에 반영됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>적립일<input id="familyContributionDate" type="date" required /></label><label>적립금 (USD)<input id="familyContributionAmount" type="number" min="0.01" step="0.01" required /></label></div><label>메모<textarea id="familyContributionNote" maxlength="180" placeholder="예: 이번 달 준우 용돈 적립"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyContributionDialog">취소</button><button class="save-button" type="submit">적립금 저장</button></menu></form></dialog>
     <dialog id="familyTradeDialog"><form method="dialog" id="familyTradeForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyTradeTitle">매수·매도 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyTradeDialog" aria-label="닫기">×</button></div><p class="auth-intro">매수하면 예수금과 평균 매수가가 자동으로 갱신됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>거래일<input id="familyTradeDate" type="date" required /></label><label>종목<select id="familyTradeSymbol"></select></label><label>구분<select id="familyTradeType"><option value="buy">매수</option><option value="sell">매도</option></select></label><label>수량<input id="familyTradeShares" type="number" min="0.0001" step="0.0001" required /></label><label>매수가 / 매도가 (USD)<input id="familyTradePrice" type="number" min="0.0001" step="0.0001" required /></label></div><label>메모<textarea id="familyTradeNote" maxlength="180" placeholder="예: 적립금으로 QLD 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyTradeDialog">취소</button><button class="save-button" type="submit">거래 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="app.js?v=20260724-32"></script>
+    <script src="app.js?v=20260724-40"></script>
   </body>
 </html>
