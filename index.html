@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260718-2" />
-    <link rel="stylesheet" href="edits.css?v=20260724-27" />
+    <link rel="stylesheet" href="edits.css?v=20260724-29" />
   </head>
   <body>
     <div id="growthToastStack" class="growth-toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -198,6 +198,11 @@
             <p class="snapshot-count" id="snapshotCount"></p>
           </aside>
         </div>
+        <section class="income-statement-section" aria-labelledby="incomeStatementTitle">
+          <div class="statement-heading"><div><p class="eyebrow">PROFIT &amp; LOSS</p><h3 id="incomeStatementTitle">손익계산서</h3><p>매출과 비용을 월별로 기록하면 연간 손익이 자동으로 모입니다.</p></div><button class="text-button export-income-button" type="button" id="exportIncomeStatementButton">세무자료용 Excel 내보내기</button></div>
+          <div class="income-statement-layout"><form id="incomeStatementForm" class="income-statement-form"><div class="balance-toolbar"><label>귀속 월<input id="incomeStatementMonth" type="month" required /></label><button class="save-button" type="submit">월별 손익 저장</button></div><div class="income-groups"><fieldset class="income-group revenue-group"><legend>수익 <span>매출</span></legend><label>상품·서비스 매출<input data-income-input="sales" type="number" min="0" step="1" placeholder="0" /></label><label>기타 수익<input data-income-input="otherIncome" type="number" min="0" step="1" placeholder="0" /></label></fieldset><fieldset class="income-group expense-group"><legend>비용 <span>지출</span></legend><label>매입·재료비<input data-income-input="purchases" type="number" min="0" step="1" placeholder="0" /></label><label>급여·인건비<input data-income-input="wages" type="number" min="0" step="1" placeholder="0" /></label><label>임차료<input data-income-input="rent" type="number" min="0" step="1" placeholder="0" /></label><label>수수료·카드수수료<input data-income-input="fees" type="number" min="0" step="1" placeholder="0" /></label><label>통신·공과금<input data-income-input="utilities" type="number" min="0" step="1" placeholder="0" /></label><label>광고·마케팅비<input data-income-input="advertising" type="number" min="0" step="1" placeholder="0" /></label><label>세금과공과<input data-income-input="taxes" type="number" min="0" step="1" placeholder="0" /></label><label>기타 비용<input data-income-input="otherExpenses" type="number" min="0" step="1" placeholder="0" /></label></fieldset></div><label class="balance-note">월별 메모<textarea id="incomeStatementNote" maxlength="200" placeholder="예: 부가세는 세금과공과에, 개인적 지출은 제외해 기록하세요."></textarea></label></form><aside class="income-summary"><p class="eyebrow">THIS MONTH</p><p id="incomeSummaryMonth" class="summary-month"></p><div class="summary-row"><span>총수익</span><strong id="incomeSummaryRevenue">0원</strong></div><div class="summary-row"><span>총비용</span><strong id="incomeSummaryExpenses">0원</strong></div><div class="income-net"><span>당기 순이익</span><strong id="incomeSummaryNetIncome">0원</strong></div><p class="accounting-tip">✦ 순이익은 총수익에서 사업 관련 비용을 뺀 금액입니다.</p></aside></div>
+          <section class="annual-income-section"><div class="annual-income-heading"><div><h3>연간 손익계산서</h3><p>저장한 월별 손익계산서가 자동으로 집계됩니다.</p></div><label>연도<select id="incomeStatementYear"></select></label></div><div class="annual-income-scroll"><table class="annual-income-table"><thead><tr><th>구분</th><th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th><th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th><th>합계</th></tr></thead><tbody id="annualIncomeTableBody"></tbody></table></div><p class="income-export-note">내보낸 파일은 매출·필요경비 정리용 초안입니다. 실제 신고 전에는 증빙과 세무 기준을 확인하세요.</p></section>
+        </section>
       </section>
       </section>
 
@@ -289,7 +294,9 @@
         <label>제목<input id="knowledgeTitle" required maxlength="100" placeholder="예: 중요한 일은 반복 가능한 구조로 만든다" /></label>
         <label>내용 <span class="optional-label">선택</span><textarea id="knowledgeBody" maxlength="2000" placeholder="내 생각, 배운 점, 나중에 확인할 질문을 자유롭게 적어보세요."></textarea></label>
         <label>태그 <span class="optional-label">선택</span><input id="knowledgeTags" maxlength="160" placeholder="사업, 습관, 투자 (쉼표로 구분)" /></label>
-        <fieldset class="knowledge-links-field"><legend>연결할 기록 <span>선택</span></legend><p>관련된 항목을 고르면 그래프에 함께 표시돼요.</p><div id="knowledgeReferenceOptions" class="knowledge-reference-options"></div></fieldset>
+        <fieldset class="knowledge-links-field"><legend>연결할 영역 <span>선택</span></legend><div id="knowledgeDomainOptions" class="knowledge-reference-options"></div></fieldset>
+        <fieldset class="knowledge-links-field"><legend>연결할 스킬 <span>선택</span></legend><div id="knowledgeSkillOptions" class="knowledge-reference-options"></div></fieldset>
+        <fieldset class="knowledge-links-field"><legend>연결할 책 <span>선택</span></legend><div id="knowledgeBookOptions" class="knowledge-reference-options"></div></fieldset>
         <fieldset class="knowledge-links-field"><legend>연결할 지식 <span>선택</span></legend><p>서로 연결될 생각을 골라주세요.</p><div id="knowledgeCardOptions" class="knowledge-reference-options"></div></fieldset>
         <menu><button class="text-button danger-button" type="button" id="deleteKnowledgeButton" hidden>삭제</button><button class="text-button" type="button" id="cancelKnowledgeButton">취소</button><button class="save-button" type="submit">저장</button></menu>
       </form>
@@ -377,6 +384,6 @@
     <dialog id="familyContributionDialog"><form method="dialog" id="familyContributionForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyContributionTitle">적립금 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyContributionDialog" aria-label="닫기">×</button></div><p class="auth-intro">새로 들어온 돈을 기록하면 누적 적립금과 예수금에 반영됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>적립일<input id="familyContributionDate" type="date" required /></label><label>적립금 (USD)<input id="familyContributionAmount" type="number" min="0.01" step="0.01" required /></label></div><label>메모<textarea id="familyContributionNote" maxlength="180" placeholder="예: 이번 달 준우 용돈 적립"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyContributionDialog">취소</button><button class="save-button" type="submit">적립금 저장</button></menu></form></dialog>
     <dialog id="familyTradeDialog"><form method="dialog" id="familyTradeForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyTradeTitle">매수·매도 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyTradeDialog" aria-label="닫기">×</button></div><p class="auth-intro">매수하면 예수금과 평균 매수가가 자동으로 갱신됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>거래일<input id="familyTradeDate" type="date" required /></label><label>종목<select id="familyTradeSymbol"></select></label><label>구분<select id="familyTradeType"><option value="buy">매수</option><option value="sell">매도</option></select></label><label>수량<input id="familyTradeShares" type="number" min="0.0001" step="0.0001" required /></label><label>매수가 / 매도가 (USD)<input id="familyTradePrice" type="number" min="0.0001" step="0.0001" required /></label></div><label>메모<textarea id="familyTradeNote" maxlength="180" placeholder="예: 적립금으로 QLD 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyTradeDialog">취소</button><button class="save-button" type="submit">거래 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-    <script src="app.js?v=20260724-30"></script>
+    <script src="app.js?v=20260724-32"></script>
   </body>
 </html>
