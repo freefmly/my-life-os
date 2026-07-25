@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260718-2" />
-  <link rel="stylesheet" href="edits.css?v=20260725-38" />
+  <link rel="stylesheet" href="edits.css?v=20260725-39" />
   </head>
   <body>
     <div id="growthToastStack" class="growth-toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -306,8 +306,8 @@
         <label>기록일 <span class="optional-label">선택</span><input id="knowledgeDate" type="date" /></label>
         <label>태그 <span class="optional-label">선택 · Enter 또는 쉼표로 추가</span><input id="knowledgeTagInput" maxlength="40" placeholder="예: 글쓰기, 사고법" /></label>
         <div id="knowledgeTagEditor" class="knowledge-tag-editor"></div>
-        <fieldset class="knowledge-links-field"><legend>연결할 책 <span>선택</span></legend><p>이 메모를 만들며 참고한 책을 골라주세요.</p><div id="knowledgeBookOptions" class="knowledge-reference-options"></div></fieldset>
-        <fieldset class="knowledge-links-field"><legend>연결할 지식 <span>선택</span></legend><p>서로 연결될 생각을 골라주세요.</p><div id="knowledgeCardOptions" class="knowledge-reference-options"></div></fieldset>
+        <fieldset class="knowledge-links-field"><legend>연결할 책 <span>선택</span></legend><p>이 메모를 만들며 참고한 책을 골라주세요.</p><input id="knowledgeBookSearch" class="knowledge-connection-search" type="search" maxlength="80" placeholder="책 제목 또는 저자 검색" /><div id="knowledgeBookOptions" class="knowledge-reference-options"></div><div id="knowledgeBookLocationOptions" class="knowledge-book-location-options"></div></fieldset>
+        <fieldset class="knowledge-links-field"><legend>연결할 지식 <span>선택</span></legend><p>서로 연결될 생각을 골라주세요.</p><input id="knowledgeCardSearch" class="knowledge-connection-search" type="search" maxlength="80" placeholder="지식 내용 검색" /><div id="knowledgeCardOptions" class="knowledge-reference-options"></div></fieldset>
         <menu><button class="text-button danger-button" type="button" id="deleteKnowledgeButton" hidden>삭제</button><button class="text-button" type="button" id="cancelKnowledgeButton">취소</button><button class="save-button" type="submit">저장</button></menu>
       </form>
     </dialog>
@@ -401,6 +401,6 @@
     <dialog id="familyContributionDialog"><form method="dialog" id="familyContributionForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyContributionTitle">적립금 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyContributionDialog" aria-label="닫기">×</button></div><p class="auth-intro">새로 들어온 돈을 기록하면 누적 적립금과 예수금에 반영됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>적립일<input id="familyContributionDate" type="date" required /></label><label>적립금 (USD)<input id="familyContributionAmount" type="number" min="0.01" step="0.01" required /></label></div><label>메모<textarea id="familyContributionNote" maxlength="180" placeholder="예: 이번 달 준우 용돈 적립"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyContributionDialog">취소</button><button class="save-button" type="submit">적립금 저장</button></menu></form></dialog>
     <dialog id="familyTradeDialog"><form method="dialog" id="familyTradeForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyTradeTitle">매수·매도 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyTradeDialog" aria-label="닫기">×</button></div><p class="auth-intro">매수하면 예수금과 평균 매수가가 자동으로 갱신됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>거래일<input id="familyTradeDate" type="date" required /></label><label>종목<select id="familyTradeSymbol"></select></label><label>구분<select id="familyTradeType"><option value="buy">매수</option><option value="sell">매도</option></select></label><label>수량<input id="familyTradeShares" type="number" min="0.0001" step="0.0001" required /></label><label>매수가 / 매도가 (USD)<input id="familyTradePrice" type="number" min="0.0001" step="0.0001" required /></label></div><label>메모<textarea id="familyTradeNote" maxlength="180" placeholder="예: 적립금으로 QLD 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyTradeDialog">취소</button><button class="save-button" type="submit">거래 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="app.js?v=20260725-48"></script>
+  <script src="app.js?v=20260725-49"></script>
   </body>
 </html>
