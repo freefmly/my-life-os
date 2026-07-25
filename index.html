@@ -124,7 +124,7 @@
           <button class="upload-button" type="button" id="addBookButton"><span>＋</span> 책 추가</button>
         </div>
         <p class="library-intro">읽고 싶은 책부터 완독한 책까지, 나만의 읽기 여정을 모아보세요.</p>
-        <label class="library-search" for="librarySearch"><span>⌕</span><input id="librarySearch" type="search" maxlength="100" placeholder="제목, 저자, 감상으로 검색" autocomplete="off" /></label>
+        <div class="library-tools"><label class="library-search" for="librarySearch"><span>⌕</span><input id="librarySearch" type="search" maxlength="100" placeholder="제목, 저자로 검색" autocomplete="off" /></label><label class="library-sort" for="librarySort">정렬<select id="librarySort"><option value="title">가나다 순</option><option value="created">등록일 순</option><option value="published">출판일 순</option></select></label></div>
         <div id="libraryList" class="library-list"></div>
       </section>
       </section>
@@ -289,6 +289,7 @@
         <label>책 형태<select id="bookFormat"><option value="paper">종이책</option><option value="ebook">전자책</option></select></label>
         <label id="bookPlatformField" hidden>전자책 플랫폼 <select id="bookPlatform"><option value="">선택 안 함</option><option value="리디">리디</option><option value="밀리의 서재">밀리의 서재</option></select></label>
         <label>독서 상태<select id="bookStatus"><option value="wish">읽고 싶은 책</option><option value="reading">읽는 중</option><option value="finished">완독</option><option value="stopped">중단됨</option></select></label>
+        <fieldset id="bookFinishedDateFields" class="book-finished-date-fields" hidden><legend>완독 날짜 <span class="optional-label">선택</span></legend><div><label>년도<input id="bookFinishedYear" type="number" inputmode="numeric" min="0" max="3000" placeholder="2026" /></label><label>월<input id="bookFinishedMonth" type="number" inputmode="numeric" min="1" max="12" placeholder="7" /></label><label>일<input id="bookFinishedDay" type="number" inputmode="numeric" min="1" max="31" placeholder="25" /></label></div></fieldset>
         <label>책 표지 <span class="optional-label">선택</span><input id="bookCover" type="file" accept="image/*" /></label>
         <p class="upload-note">표지 사진은 1.5MB 이하의 이미지로 등록할 수 있어요.</p>
         <label>또는 표지 이미지 URL <span class="optional-label">선택</span><input id="bookCoverUrl" type="url" placeholder="https://example.com/book-cover.jpg" /></label>
