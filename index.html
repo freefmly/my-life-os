@@ -285,8 +285,9 @@
         <label>원서 제목 <span class="optional-label">선택</span><input id="bookOriginalTitle" maxlength="160" placeholder="예: The Psychology of Money" /></label>
         <label>저자<input id="bookAuthor" maxlength="80" placeholder="예: 우석" /></label>
         <label>출판년도 <span class="optional-label">선택</span><input id="bookPublishedYear" type="number" inputmode="numeric" min="0" max="3000" placeholder="예: 2020" /></label>
-        <label>독서 상태<select id="bookStatus"><option value="wish">읽고 싶은 책</option><option value="reading">읽는 중</option><option value="finished">완독</option></select></label>
-        <label>나의 감상 <span class="optional-label">선택</span><textarea id="bookReview" maxlength="2000" placeholder="기억하고 싶은 문장, 새롭게 알게 된 점, 읽고 난 뒤의 생각을 남겨보세요."></textarea></label>
+        <label>책 형태<select id="bookFormat"><option value="paper">종이책</option><option value="ebook">전자책</option></select></label>
+        <label id="bookPlatformField" hidden>전자책 플랫폼 <select id="bookPlatform"><option value="">선택 안 함</option><option value="리디">리디</option><option value="밀리의 서재">밀리의 서재</option></select></label>
+        <label>독서 상태<select id="bookStatus"><option value="wish">읽고 싶은 책</option><option value="reading">읽는 중</option><option value="finished">완독</option><option value="stopped">중단됨</option></select></label>
         <label>책 표지 <span class="optional-label">선택</span><input id="bookCover" type="file" accept="image/*" /></label>
         <p class="upload-note">표지 사진은 1.5MB 이하의 이미지로 등록할 수 있어요.</p>
         <label>또는 표지 이미지 URL <span class="optional-label">선택</span><input id="bookCoverUrl" type="url" placeholder="https://example.com/book-cover.jpg" /></label>
