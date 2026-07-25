@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css?v=20260718-2" />
-  <link rel="stylesheet" href="edits.css?v=20260725-34" />
+  <link rel="stylesheet" href="edits.css?v=20260725-37" />
   </head>
   <body>
     <div id="growthToastStack" class="growth-toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
@@ -130,10 +130,10 @@
 
       <section class="app-view" data-view-panel="knowledge">
         <section class="knowledge-section knowledge-canvas-workspace">
-          <div class="knowledge-canvas-toolbar"><div class="knowledge-workspace-tabs" role="tablist" aria-label="메모 단계"><button class="is-active" type="button" data-knowledge-tab="permanent" role="tab">영구 메모</button><button type="button" data-knowledge-tab="fleeting" role="tab">임시 메모</button><button type="button" data-knowledge-tab="literature" role="tab">문헌 메모</button></div><div class="knowledge-search-bar"><input id="knowledgeSearch" type="search" maxlength="80" placeholder="지식 검색" /><span id="knowledgeCount" class="hint"></span><button class="text-button" type="button" id="randomKnowledgeButton">랜덤 노트</button></div><button class="upload-button" type="button" id="addKnowledgeButton"><span>＋</span> 지식 추가</button><span id="knowledgeGraphCaption" class="knowledge-graph-caption"></span></div>
+          <div class="knowledge-canvas-toolbar"><div class="knowledge-workspace-tabs" role="tablist" aria-label="메모 단계"><button class="is-active" type="button" data-knowledge-tab="permanent" role="tab">영구 메모</button><button type="button" data-knowledge-tab="fleeting" role="tab">임시 메모</button><button type="button" data-knowledge-tab="tags" role="tab">태그 색인</button></div><div class="knowledge-search-bar"><input id="knowledgeSearch" type="search" maxlength="80" placeholder="지식 검색" /><span id="knowledgeCount" class="hint"></span><button class="text-button" type="button" id="clearKnowledgeTagFilter" hidden>태그 필터 해제</button><button class="text-button" type="button" id="randomKnowledgeButton">랜덤 노트</button></div><button class="upload-button" type="button" id="addKnowledgeButton"><span>＋</span> 지식 추가</button><span id="knowledgeGraphCaption" class="knowledge-graph-caption"></span></div>
           <div id="knowledgeGraph" class="knowledge-graph"></div>
           <section id="fleetingNotesPanel" class="knowledge-note-panel" hidden></section>
-          <section id="literatureNotesPanel" class="knowledge-note-panel" hidden></section>
+          <section id="knowledgeTagIndexPanel" class="knowledge-tag-index-panel" hidden></section>
         </section>
       </section>
 
@@ -295,7 +295,9 @@
         <div class="modal-top"><div><p class="eyebrow" id="knowledgeDialogEyebrow">NEW KNOWLEDGE</p><h2 id="knowledgeDialogTitle">생각 한 조각을 남겨요.</h2></div><button class="close-button" type="button" id="closeKnowledgeButton" aria-label="닫기">×</button></div>
         <label>생각<textarea id="knowledgeContent" required maxlength="2000" placeholder="떠오른 생각을 그대로 적어보세요. 제목이나 태그로 나눌 필요가 없어요."></textarea></label>
         <label>기록일 <span class="optional-label">선택</span><input id="knowledgeDate" type="date" /></label>
-        <fieldset class="knowledge-links-field"><legend>재료가 된 문헌 메모 <span>선택</span></legend><p>영구 메모는 문헌 메모만 연결받습니다.</p><div id="knowledgeLiteratureOptions" class="knowledge-reference-options"></div></fieldset>
+        <label>태그 <span class="optional-label">선택 · Enter 또는 쉼표로 추가</span><input id="knowledgeTagInput" maxlength="40" placeholder="예: 글쓰기, 사고법" /></label>
+        <div id="knowledgeTagEditor" class="knowledge-tag-editor"></div>
+        <fieldset class="knowledge-links-field"><legend>연결할 책 <span>선택</span></legend><p>이 메모를 만들며 참고한 책을 골라주세요.</p><div id="knowledgeBookOptions" class="knowledge-reference-options"></div></fieldset>
         <fieldset class="knowledge-links-field"><legend>연결할 지식 <span>선택</span></legend><p>서로 연결될 생각을 골라주세요.</p><div id="knowledgeCardOptions" class="knowledge-reference-options"></div></fieldset>
         <menu><button class="text-button danger-button" type="button" id="deleteKnowledgeButton" hidden>삭제</button><button class="text-button" type="button" id="cancelKnowledgeButton">취소</button><button class="save-button" type="submit">저장</button></menu>
       </form>
@@ -303,10 +305,6 @@
 
     <dialog id="fleetingNoteDialog" class="knowledge-detail-dialog">
       <form method="dialog" id="fleetingNoteForm"><div class="modal-top"><div><p class="eyebrow" id="fleetingNoteDialogEyebrow">FLEETING NOTE</p><h2>순간의 생각</h2></div><button class="close-button" type="button" id="closeFleetingNoteButton" aria-label="닫기">×</button></div><div class="note-editor-fields"><label>임시 메모<textarea id="fleetingNoteContent" required maxlength="2000" placeholder="지금 떠오른 생각을 짧게 남겨보세요. 연결하지 않아도 됩니다."></textarea></label></div><menu><button class="text-button danger-button" type="button" id="deleteFleetingNoteButton" hidden>삭제</button><button class="text-button" type="button" id="promoteFleetingNoteButton">영구 메모로 발전시키기</button><button class="save-button" type="submit">저장</button></menu></form>
-    </dialog>
-
-    <dialog id="literatureNoteDialog" class="knowledge-detail-dialog">
-      <form method="dialog" id="literatureNoteForm"><div class="modal-top"><div><p class="eyebrow" id="literatureNoteDialogEyebrow">LITERATURE NOTE</p><h2>읽고 이해한 것을 남겨요.</h2></div><button class="close-button" type="button" id="closeLiteratureNoteButton" aria-label="닫기">×</button></div><div class="note-editor-fields"><label>문헌 메모<textarea id="literatureNoteContent" required maxlength="4000" placeholder="출처를 읽고 듣고 본 뒤, 내가 이해한 내용을 내 말로 적어보세요."></textarea></label><div class="literature-source-grid"><label>출처 종류<select id="literatureSourceType"><option value="book">책</option><option value="blog">블로그</option><option value="youtube">유튜브</option><option value="ebook">전자책</option><option value="article">기사 · 논문</option><option value="podcast">팟캐스트</option><option value="other">기타</option></select></label><label id="literatureBookField">서재의 책<select id="literatureBookId"></select></label><label id="literatureSourceTitleField">출처 제목<input id="literatureSourceTitle" maxlength="160" placeholder="글·영상의 제목" /></label><label>저자 · 채널 <span class="optional-label">선택</span><input id="literatureSourceCreator" maxlength="100" placeholder="저자, 블로그, 채널명" /></label><label>출처 링크 <span class="optional-label">선택</span><input id="literatureSourceUrl" type="url" maxlength="500" placeholder="https://" /></label></div></div><menu><button class="text-button danger-button" type="button" id="deleteLiteratureNoteButton" hidden>삭제</button><button class="text-button" type="button" id="promoteLiteratureNoteButton">영구 메모로 발전시키기</button><button class="save-button" type="submit">저장</button></menu></form>
     </dialog>
 
     <dialog id="backupDialog"><form method="dialog" id="backupForm"><div class="modal-top"><div><p class="eyebrow">PORTABLE BACKUP</p><h2>백업 · 복원</h2></div><button class="close-button" type="button" id="closeBackupButton" aria-label="닫기">×</button></div><p class="backup-intro">백업 파일에는 현재 기록과 지식 연결을 담습니다. 로그인 후 올린 추억 사진도 파일 안에 포함해, Supabase 없이 복원할 수 있도록 준비합니다.</p><section class="backup-action"><h3>전체 백업</h3><p>JSON 파일 하나를 다운로드합니다. 사진이 많으면 조금 시간이 걸릴 수 있어요.</p><button class="save-button" type="button" id="exportBackupButton">전체 백업 다운로드</button></section><section class="backup-action"><h3>백업 복원</h3><p>복원하면 현재 브라우저의 모든 기록을 백업 파일 내용으로 바꿉니다.</p><input id="importBackupFile" type="file" accept="application/json,.json" /><button class="text-button danger-button" type="button" id="importBackupButton">백업 파일 복원</button></section><p id="backupMessage" class="auth-message"></p><menu><button class="text-button" type="button" id="cancelBackupButton">닫기</button></menu></form></dialog>
@@ -391,6 +389,6 @@
     <dialog id="familyContributionDialog"><form method="dialog" id="familyContributionForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyContributionTitle">적립금 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyContributionDialog" aria-label="닫기">×</button></div><p class="auth-intro">새로 들어온 돈을 기록하면 누적 적립금과 예수금에 반영됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>적립일<input id="familyContributionDate" type="date" required /></label><label>적립금 (USD)<input id="familyContributionAmount" type="number" min="0.01" step="0.01" required /></label></div><label>메모<textarea id="familyContributionNote" maxlength="180" placeholder="예: 이번 달 준우 용돈 적립"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyContributionDialog">취소</button><button class="save-button" type="submit">적립금 저장</button></menu></form></dialog>
     <dialog id="familyTradeDialog"><form method="dialog" id="familyTradeForm"><div class="modal-top"><div><p class="eyebrow">LONG-TERM ACCOUNT</p><h2 id="familyTradeTitle">매수·매도 기록</h2></div><button class="close-button" type="button" data-close-dialog="familyTradeDialog" aria-label="닫기">×</button></div><p class="auth-intro">매수하면 예수금과 평균 매수가가 자동으로 갱신됩니다. 모든 금액은 USD입니다.</p><div class="investment-form-grid"><label>거래일<input id="familyTradeDate" type="date" required /></label><label>종목<select id="familyTradeSymbol"></select></label><label>구분<select id="familyTradeType"><option value="buy">매수</option><option value="sell">매도</option></select></label><label>수량<input id="familyTradeShares" type="number" min="0.0001" step="0.0001" required /></label><label>매수가 / 매도가 (USD)<input id="familyTradePrice" type="number" min="0.0001" step="0.0001" required /></label></div><label>메모<textarea id="familyTradeNote" maxlength="180" placeholder="예: 적립금으로 QLD 매수"></textarea></label><menu><button class="text-button" type="button" data-close-dialog="familyTradeDialog">취소</button><button class="save-button" type="submit">거래 저장</button></menu></form></dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="app.js?v=20260725-44"></script>
+  <script src="app.js?v=20260725-47"></script>
   </body>
 </html>
