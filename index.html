@@ -282,6 +282,7 @@
       <form method="dialog" id="bookForm">
         <div class="modal-top"><div><p class="eyebrow" id="bookDialogEyebrow">NEW BOOK</p><h2 id="bookDialogTitle">서재에 책을 추가해요.</h2></div><button class="close-button" type="button" id="closeBookButton" aria-label="닫기">×</button></div>
         <label>책 제목<input id="bookTitle" required maxlength="100" placeholder="예: 부의 인문학" /></label>
+        <label>부제 <span class="optional-label">선택</span><input id="bookSubtitle" maxlength="160" placeholder="예: 돈과 삶을 바라보는 새로운 시선" /></label>
         <label>원서 제목 <span class="optional-label">선택</span><input id="bookOriginalTitle" maxlength="160" placeholder="예: The Psychology of Money" /></label>
         <label>저자<input id="bookAuthor" maxlength="80" placeholder="예: 우석" /></label>
         <label>출판년도 <span class="optional-label">선택</span><input id="bookPublishedYear" type="number" inputmode="numeric" min="0" max="3000" placeholder="예: 2020" /></label>
@@ -297,7 +298,7 @@
       </form>
     </dialog>
     <dialog id="bookDetailDialog" class="book-detail-dialog">
-      <form method="dialog"><div class="modal-top"><div><p class="eyebrow" id="bookDetailMeta">MY LIBRARY</p><h2 id="bookDetailTitle"></h2></div><button class="close-button" type="button" id="closeBookDetailButton" aria-label="닫기">×</button></div><div id="bookDetailBody"></div><menu><button class="text-button" type="button" id="editBookFromDetailButton">수정</button><button class="save-button" type="button" id="closeBookDetailFooterButton">닫기</button></menu></form>
+      <form method="dialog"><div class="modal-top"><div><p class="eyebrow" id="bookDetailMeta">MY LIBRARY</p><h2 id="bookDetailTitle"></h2><p class="book-detail-subtitle" id="bookDetailSubtitle" hidden></p></div><button class="close-button" type="button" id="closeBookDetailButton" aria-label="닫기">×</button></div><div id="bookDetailBody"></div><menu><button class="text-button" type="button" id="editBookFromDetailButton">수정</button><button class="save-button" type="button" id="closeBookDetailFooterButton">닫기</button></menu></form>
     </dialog>
     <dialog id="knowledgeDialog">
       <form method="dialog" id="knowledgeForm">
