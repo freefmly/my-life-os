@@ -3,14 +3,6 @@ const nyDate = (value: Date | number) => new Intl.DateTimeFormat('en-CA', { time
 const number = (value: unknown) => Number(value) || 0;
 
 type Quote = { price: number; timestamp: number };
-type Snapshot = Record<string, unknown> & { date: string };
-
-function replaceDailySnapshot(snapshots: unknown, snapshot: Snapshot) {
-  const day = snapshot.date.slice(0, 10);
-  const existing = Array.isArray(snapshots) ? snapshots.filter((item) => String(item?.date || '').slice(0, 10) !== day) : [];
-  return [...existing, snapshot];
-}
-
 function currentVrCycle(vr: Record<string, unknown>) {
   const cycles = Array.isArray(vr.cycles) ? vr.cycles : [];
   return [...cycles].sort((a, b) => new Date(String(a?.date || '')).getTime() - new Date(String(b?.date || '')).getTime()).at(-1) as Record<string, unknown> | undefined;
@@ -64,19 +56,19 @@ Deno.serve(async (request) => {
     if (Object.values(quotes).some((quote) => nyDate(quote.timestamp) !== marketDay)) return Response.json({ skipped: 'market-not-closed-today' });
 
     const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
-    const rowsResponse = await fetch(`${supabaseUrl}/rest/v1/life_app_states?select=user_id,data`, { headers });
+    // Snapshot history is stored separately, so this job never rewrites the full life-state JSON.
+    const rowsResponse = await fetch(`${supabaseUrl}/rest/v1/life_app_states?select=user_id,investments:data-%3Einvestments`, { headers });
     if (!rowsResponse.ok) throw new Error('Unable to load app states');
-    const rows = await rowsResponse.json() as Array<{ user_id: string; data: Record<string, unknown> }>;
+    const rows = await rowsResponse.json() as Array<{ user_id: string; investments: Record<string, unknown> | null }>;
     const capturedAt = new Date().toISOString();
     let updated = 0;
 
     for (const row of rows) {
-      const data = row.data || {};
-      const investments = (data.investments || {}) as Record<string, unknown>;
+      const investments = row.investments || {};
       const accounts = (investments.familyAccounts || {}) as Record<string, Record<string, unknown>>;
-      let changed = false;
+      const snapshots: Array<Record<string, unknown>> = [];
 
-      for (const account of Object.values(accounts)) {
+      for (const [accountId, account] of Object.entries(accounts)) {
         const holdings = (account.holdings || {}) as Record<string, Record<string, unknown>>;
         const symbolsValue = Object.keys(holdings);
         if (!symbolsValue.length) continue;
@@ -89,8 +81,7 @@ Deno.serve(async (request) => {
         });
         const total = stockValue + number(account.cash);
         if (!total && !number(account.contributed)) continue;
-        account.snapshots = replaceDailySnapshot(account.snapshots, { id: crypto.randomUUID(), date: capturedAt, total, principal: number(account.contributed), source: 'market-close' });
-        changed = true;
+        snapshots.push({ user_id: row.user_id, snapshot_type: 'family-account', account_id: accountId, snapshot_key: marketDay, captured_at: capturedAt, payload: { id: crypto.randomUUID(), date: capturedAt, total, principal: number(account.contributed), source: 'market-close' } });
       }
 
       const vr = investments.tqqqVr as Record<string, unknown> | undefined;
@@ -98,15 +89,13 @@ Deno.serve(async (request) => {
       if (vr && cycle) {
         const position = vrPosition(vr, cycle);
         const valuation = position.shares * quotes.TQQQ.price;
-        vr.snapshots = replaceDailySnapshot(vr.snapshots, { id: crypto.randomUUID(), date: capturedAt, cycleId: cycle.id, valuation, total: valuation + position.pool, pool: position.pool, targetValue: number(cycle.targetValue), lowerBand: number(cycle.lowerBand), upperBand: number(cycle.upperBand), source: 'market-close' });
-        changed = true;
+        snapshots.push({ user_id: row.user_id, snapshot_type: 'tqqq-vr', account_id: '', snapshot_key: marketDay, captured_at: capturedAt, payload: { id: crypto.randomUUID(), date: capturedAt, cycleId: cycle.id, valuation, total: valuation + position.pool, pool: position.pool, targetValue: number(cycle.targetValue), lowerBand: number(cycle.lowerBand), upperBand: number(cycle.upperBand), source: 'market-close' } });
       }
 
-      if (!changed) continue;
-      data.investments = investments;
-      const update = await fetch(`${supabaseUrl}/rest/v1/life_app_states?user_id=eq.${encodeURIComponent(row.user_id)}`, { method: 'PATCH', headers, body: JSON.stringify({ data, updated_at: capturedAt }) });
-      if (!update.ok) throw new Error(`Unable to save snapshot for ${row.user_id}`);
-      updated += 1;
+      if (!snapshots.length) continue;
+      const update = await fetch(`${supabaseUrl}/rest/v1/investment_snapshots`, { method: 'POST', headers: { ...headers, Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify(snapshots) });
+      if (!update.ok) throw new Error(`Unable to save snapshots for ${row.user_id}`);
+      updated += snapshots.length;
     }
     return Response.json({ updated, marketDay, capturedAt });
   } catch (error) {

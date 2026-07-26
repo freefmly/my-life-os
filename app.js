@@ -69,6 +69,9 @@ let cloudSavePromise = null;
 let cloudChannel = null;
 let cloudHasLocalChanges = false;
 let cloudRetryCount = 0;
+let investmentSnapshotSyncTimer = null;
+let investmentSnapshotSyncPromise = null;
+const syncedInvestmentSnapshotPayloads = new Map();
 let okrLocalChangeAt = 0;
 const visionInput = $('#visionInput');
 const board = $('#visionBoard');
@@ -133,9 +136,11 @@ let tqqqChartRange = 'day';
 let familyChartRange = 'day';
 
 function cloneCloudState(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
+function cloudStatePayload(value) { const payload = cloneCloudState(value); if (!payload) return payload; payload.businessSnapshots = []; if (payload.investments?.soxl) payload.investments.soxl.snapshots = []; if (payload.investments?.tqqqVr) payload.investments.tqqqVr.snapshots = []; Object.values(payload.investments?.familyAccounts || {}).forEach((account) => { account.snapshots = []; }); return payload; }
 function cloudValuesEqual(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
 function scheduleCloudSave(delay = 700) { if (!signedInUser || isLoadingCloudState) return; clearTimeout(cloudSaveTimer); cloudSaveTimer = setTimeout(() => { saveCloudState(); }, delay); }
-function persist() { storeLocalState(); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); } }
+function scheduleInvestmentSnapshotSync(delay = 700) { if (!signedInUser || isLoadingCloudState) return; clearTimeout(investmentSnapshotSyncTimer); investmentSnapshotSyncTimer = setTimeout(() => { syncInvestmentSnapshots(); }, delay); }
+function persist() { storeLocalState(); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); scheduleInvestmentSnapshotSync(); } }
 function escapeHtml(text) { const el = document.createElement('div'); el.textContent = text; return el.innerHTML; }
 function formatDate(value) { if (!value) return '언젠가'; const [year, month] = value.split('-'); return `${year}.${month}`; }
 function formatNumber(value) { return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value); }
@@ -386,6 +391,10 @@ function openActivityDialog(id = null) { editingActivityId = id; const activity 
 function openProfileDialog() { const profile = state.growth.profile; $('#profileForm').reset(); $('#profileName').value = profile.name || ''; $('#profileBio').value = profile.bio || ''; if (/^https?:\/\//.test(profile.image || '')) $('#profileImageUrl').value = profile.image; $('#removeProfileImageOption').hidden = !profile.image; profileDialog.showModal(); $('#profileName').focus(); }
 function mergeDailySnapshotRecords(remoteRecords, localRecords) { const merged = new Map(); dailySoxlSnapshots(Array.isArray(remoteRecords) ? remoteRecords : []).forEach((record) => merged.set(String(record.date).slice(0, 10), record)); dailySoxlSnapshots(Array.isArray(localRecords) ? localRecords : []).forEach((record) => merged.set(String(record.date).slice(0, 10), record)); return [...merged.values()]; }
 function preserveRemoteInvestmentSnapshots(remoteState) { const remoteInvestments = remoteState?.investments; if (!remoteInvestments) return; const localInvestments = state.investments; const remoteVr = remoteInvestments.tqqqVr || {}; localInvestments.tqqqVr.snapshots = mergeDailySnapshotRecords(remoteVr.snapshots, localInvestments.tqqqVr.snapshots); Object.keys(localInvestments.familyAccounts || {}).forEach((accountId) => { const localAccount = localInvestments.familyAccounts[accountId]; const remoteAccount = remoteInvestments.familyAccounts?.[accountId]; if (localAccount && remoteAccount) localAccount.snapshots = mergeDailySnapshotRecords(remoteAccount.snapshots, localAccount.snapshots); }); }
+function investmentSnapshotRows() { const rows = []; const add = (snapshotType, accountId, snapshotKey, snapshot) => { if (!snapshotKey) return; rows.push({ user_id: signedInUser.id, snapshot_type: snapshotType, account_id: accountId, snapshot_key: snapshotKey, captured_at: snapshot.savedAt || snapshot.date || new Date().toISOString(), payload: snapshot }); }; (state.investments?.soxl?.snapshots || []).forEach((snapshot) => add('soxl', '', String(snapshot.date || '').slice(0, 10), snapshot)); (state.investments?.tqqqVr?.snapshots || []).forEach((snapshot) => add('tqqq-vr', '', String(snapshot.date || '').slice(0, 10), snapshot)); Object.entries(state.investments?.familyAccounts || {}).forEach(([accountId, account]) => (account.snapshots || []).forEach((snapshot) => add('family-account', accountId, String(snapshot.date || '').slice(0, 10), snapshot))); (state.businessSnapshots || []).forEach((snapshot) => add('business-balance', '', snapshot.month, snapshot)); return rows; }
+function investmentSnapshotMapKey(row) { return `${row.snapshot_type}:${row.account_id}:${row.snapshot_key}`; }
+async function syncInvestmentSnapshots() { if (!supabaseClient || !signedInUser || investmentSnapshotSyncPromise) return investmentSnapshotSyncPromise; investmentSnapshotSyncPromise = (async () => { const rows = investmentSnapshotRows(); const current = new Map(rows.map((row) => [investmentSnapshotMapKey(row), JSON.stringify(row.payload)])); const changed = rows.filter((row) => syncedInvestmentSnapshotPayloads.get(investmentSnapshotMapKey(row)) !== JSON.stringify(row.payload)); const removed = [...syncedInvestmentSnapshotPayloads.keys()].filter((key) => !current.has(key)); if (changed.length) { const { error } = await supabaseClient.from('investment_snapshots').upsert(changed, { onConflict: 'user_id,snapshot_type,account_id,snapshot_key' }); if (error) throw error; } for (const key of removed) { const [snapshotType, accountId, snapshotKey] = key.split(':'); const { error } = await supabaseClient.from('investment_snapshots').delete().eq('snapshot_type', snapshotType).eq('account_id', accountId).eq('snapshot_key', snapshotKey); if (error) throw error; } syncedInvestmentSnapshotPayloads.clear(); current.forEach((payload, key) => syncedInvestmentSnapshotPayloads.set(key, payload)); })().catch((error) => console.error('Investment snapshot sync failed', error)).finally(() => { investmentSnapshotSyncPromise = null; }); return investmentSnapshotSyncPromise; }
+async function loadInvestmentSnapshots() { if (!supabaseClient || !signedInUser) return; const { data, error } = await supabaseClient.from('investment_snapshots').select('snapshot_type,account_id,snapshot_key,payload').order('captured_at', { ascending: true }); if (error) { console.warn('Investment snapshots unavailable', error); return; } const rows = data || []; if (!rows.length) return; const byType = (type, accountId = '') => rows.filter((row) => row.snapshot_type === type && row.account_id === accountId).map((row) => row.payload); state.investments.soxl.snapshots = byType('soxl'); state.investments.tqqqVr.snapshots = byType('tqqq-vr'); Object.keys(state.investments.familyAccounts || {}).forEach((accountId) => { state.investments.familyAccounts[accountId].snapshots = byType('family-account', accountId); }); state.businessSnapshots = byType('business-balance'); syncedInvestmentSnapshotPayloads.clear(); rows.forEach((row) => syncedInvestmentSnapshotPayloads.set(investmentSnapshotMapKey(row), JSON.stringify(row.payload))); storeLocalState(); render(); }
 function updateAuthUI(message = '') { const status = message || (signedInUser ? signedInUser.email || '동기화됨' : '로컬 모드'); const buttonLabel = signedInUser ? '로그아웃' : '로그인 · 동기화'; authStatuses.forEach((element) => { element.textContent = status; }); authButtons.forEach((button) => { button.textContent = buttonLabel; }); }
 const contentTypes = { webtoon: '웹툰', movie: '영화', drama: '드라마', game: '게임', novel: '소설 · 웹소설', other: '기타' };
 const contentStatuses = { active: '즐기는 중', paused: '잠시 보류', finished: '완료', wishlist: '나중에' };
@@ -472,7 +481,7 @@ function renderContents() { const content = activeContent(); contentList.innerHT
   $('#loreTree').innerHTML = roots.length ? roots.map(branch).join('') : `<div class="lore-empty">아직 ${loreTypes[loreTab]} 설정이 없어요.</div>`;
   return;
 }
-function applyCloudState(nextState, message = '동기화됨') { state = cloneCloudState(nextState || {}); normalizeState(); ensureOkrWorkspace(); normalizeKnowledgeState(); const removedWikiData = discardWikiData(); normalizeVaultState(); if (removedWikiData) { cloudHasLocalChanges = true; if (!isLoadingCloudState) scheduleCloudSave(0); } storeLocalState(); render(); updateAuthUI(message); }
+function applyCloudState(nextState, message = '동기화됨') { const localSnapshots = signedInUser ? { business: state.businessSnapshots, soxl: state.investments?.soxl?.snapshots, vr: state.investments?.tqqqVr?.snapshots, family: Object.fromEntries(Object.entries(state.investments?.familyAccounts || {}).map(([id, account]) => [id, account.snapshots])) } : null; state = cloneCloudState(nextState || {}); normalizeState(); if (localSnapshots && syncedInvestmentSnapshotPayloads.size) { state.businessSnapshots = localSnapshots.business || []; state.investments.soxl.snapshots = localSnapshots.soxl || []; state.investments.tqqqVr.snapshots = localSnapshots.vr || []; Object.entries(localSnapshots.family).forEach(([id, snapshots]) => { if (state.investments.familyAccounts[id]) state.investments.familyAccounts[id].snapshots = snapshots || []; }); } ensureOkrWorkspace(); normalizeKnowledgeState(); const removedWikiData = discardWikiData(); normalizeVaultState(); if (removedWikiData) { cloudHasLocalChanges = true; if (!isLoadingCloudState) scheduleCloudSave(0); } storeLocalState(); render(); updateAuthUI(message); }
 function unsubscribeCloudState() { if (cloudChannel && supabaseClient) supabaseClient.removeChannel(cloudChannel); cloudChannel = null; }
 function receiveCloudState(remoteState) {
   if (!signedInUser || !remoteState || typeof remoteState !== 'object') return;
@@ -499,11 +508,11 @@ async function saveCloudState() {
   const userId = signedInUser.id;
   cloudSavePromise = (async () => {
     try {
-      const payload = cloneCloudState(state);
+      const payload = cloudStatePayload(state);
       const { error } = await supabaseClient.from('life_app_states').upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() });
       if (error) throw error;
       cloudRetryCount = 0;
-      cloudHasLocalChanges = !cloudValuesEqual(state, payload);
+      cloudHasLocalChanges = !cloudValuesEqual(cloudStatePayload(state), payload);
       updateAuthUI(cloudHasLocalChanges ? '동기화 중…' : '동기화됨');
       if (cloudHasLocalChanges) scheduleCloudSave(100);
     } catch (error) {
@@ -541,6 +550,7 @@ async function loadCloudState() {
         const migratedLocalData = !cloudValuesEqual(serverState, data.data);
         cloudHasLocalChanges = migratedLocalData;
         applyCloudState(serverState, migratedLocalData ? '이 기기의 기존 데이터를 서버로 이관 중…' : '동기화됨');
+        await loadInvestmentSnapshots();
       } else {
         applyCloudState(localStateBeforeCloudLoad);
         cloudHasLocalChanges = true;
