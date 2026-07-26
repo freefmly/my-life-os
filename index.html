@@ -32,7 +32,6 @@
           <p class="nav-label">도서관</p>
           <button type="button" class="nav-item" data-nav-view="library"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v17H6.5A2.5 2.5 0 0 0 4 22Z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H12v17h5.5A2.5 2.5 0 0 1 20 22Z"/></svg> 내 서재</button>
           <button type="button" class="nav-item" data-nav-view="knowledge"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6"/></svg> 지식</button>
-          <button type="button" class="nav-item" data-nav-view="wiki"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h11.5A2.5 2.5 0 0 1 19 7v12.5H7.5A2.5 2.5 0 0 0 5 22Z"/><path d="M5 4.5v15A2.5 2.5 0 0 1 7.5 17H19"/><path d="M9 8h6M9 11h6M9 14h4"/></svg> 위키백과</button>
           <button type="button" class="nav-item" data-nav-view="contents"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 5 3 4m4-4 3 4M3 10h18"/></svg> 콘텐츠 &amp; 취미</button>
           <p class="nav-label">관계</p>
           <button type="button" class="nav-item" data-nav-view="memories"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m5 17 5-5 3 3 2-2 4 4"/></svg> 추억</button>
@@ -135,13 +134,6 @@
         <div class="library-tools"><label class="library-search" for="librarySearch"><span>⌕</span><input id="librarySearch" type="search" maxlength="100" placeholder="제목, 저자로 검색" autocomplete="off" /></label><label class="library-sort" for="librarySort">정렬<select id="librarySort"><option value="title">가나다 순</option><option value="created">등록일 순</option><option value="published">출판일 순</option></select></label></div>
         <div id="libraryList" class="library-list"></div>
       </section>
-      </section>
-
-      <section class="app-view" data-view-panel="wiki">
-        <section class="knowledge-section knowledge-canvas-workspace wiki-canvas-workspace">
-          <div class="knowledge-canvas-toolbar wiki-canvas-toolbar"><button class="upload-button" type="button" id="addWikiButton"><span>＋</span> 위키 문서 추가</button></div>
-          <section id="wikiPanel" class="knowledge-note-panel"></section>
-        </section>
       </section>
 
       <section class="app-view" data-view-panel="knowledge">
@@ -338,9 +330,6 @@
 
     <dialog id="fleetingNoteDialog" class="knowledge-detail-dialog">
       <form method="dialog" id="fleetingNoteForm"><div class="modal-top"><div><p class="eyebrow" id="fleetingNoteDialogEyebrow">FLEETING NOTE</p><h2>순간의 생각</h2></div><button class="close-button" type="button" id="closeFleetingNoteButton" aria-label="닫기">×</button></div><div class="note-editor-fields"><label>임시 메모<textarea id="fleetingNoteContent" required maxlength="2000" placeholder="지금 떠오른 생각을 짧게 남겨보세요. 연결하지 않아도 됩니다."></textarea></label></div><menu><button class="text-button danger-button" type="button" id="deleteFleetingNoteButton" hidden>삭제</button><button class="text-button" type="button" id="promoteFleetingNoteButton">영구 메모로 발전시키기</button><button class="save-button" type="submit">저장</button></menu></form>
-    </dialog>
-    <dialog id="wikiDialog" class="knowledge-detail-dialog">
-      <form method="dialog" id="wikiForm"><div class="modal-top"><div><p class="eyebrow" id="wikiDialogEyebrow">NEW WIKI PAGE</p><h2 id="wikiDialogTitle">나만의 위키 한 장</h2></div><button class="close-button" type="button" id="closeWikiButton" aria-label="닫기">×</button></div><div class="note-editor-fields"><label>제목<input id="wikiTitle" required maxlength="80" placeholder="예: 확증 편향" /></label><label>대표 이미지 <span class="optional-label">선택 · 1.5MB 이하</span><input id="wikiImageFile" type="file" accept="image/*" /></label><label>또는 대표 이미지 URL <span class="optional-label">선택</span><input id="wikiImageUrl" type="url" placeholder="https://example.com/image.jpg" /></label><label class="remove-cover-option" id="wikiRemoveImageOption" hidden><input id="wikiRemoveImage" type="checkbox" /> <span>기존 대표 이미지 제거</span></label><label class="wiki-description-field">설명 <span class="optional-label">[[문서 제목]]으로 다른 위키를 연결</span><textarea id="wikiDescription" maxlength="5000" placeholder="개념을 내 언어로 설명해보세요.&#10;&#10;예: [[확증 편향]]을 줄이려면 반대 근거를 의도적으로 찾아본다." aria-autocomplete="list" aria-controls="wikiLinkSuggestions"></textarea><div id="wikiLinkSuggestions" class="wiki-link-suggestions" hidden role="listbox" aria-label="연결할 위키 문서"></div></label></div><menu><button class="text-button danger-button" type="button" id="wikiDeleteButton" hidden>삭제</button><button class="text-button" type="button" id="cancelWikiButton">취소</button><button class="save-button" type="submit">저장</button></menu></form>
     </dialog>
 
     <dialog id="backupDialog"><form method="dialog" id="backupForm"><div class="modal-top"><div><p class="eyebrow">PORTABLE BACKUP</p><h2>백업 · 복원</h2></div><button class="close-button" type="button" id="closeBackupButton" aria-label="닫기">×</button></div><p class="backup-intro">백업 파일에는 현재 기록과 지식 연결을 담습니다. 로그인 후 올린 추억 사진도 파일 안에 포함해, Supabase 없이 복원할 수 있도록 준비합니다.</p><section class="backup-action"><h3>전체 백업</h3><p>JSON 파일 하나를 다운로드합니다. 사진이 많으면 조금 시간이 걸릴 수 있어요.</p><button class="save-button" type="button" id="exportBackupButton">전체 백업 다운로드</button></section><section class="backup-action"><h3>백업 복원</h3><p>복원하면 현재 브라우저의 모든 기록을 백업 파일 내용으로 바꿉니다.</p><input id="importBackupFile" type="file" accept="application/json,.json" /><button class="text-button danger-button" type="button" id="importBackupButton">백업 파일 복원</button></section><p id="backupMessage" class="auth-message"></p><menu><button class="text-button" type="button" id="cancelBackupButton">닫기</button></menu></form></dialog>
