@@ -281,6 +281,9 @@ dialog .milestone-option input { display: inline-block; width: auto; margin: 3px
 @media (max-width:800px) { .memories-section,.people-section { padding-top:35px; }.memory-grid,.people-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.memory-card-cover { height:170px; } } @media (max-width:520px) { .memory-grid,.people-grid { grid-template-columns:1fr; }.memory-card-cover { height:210px; }.memory-image-preview { grid-template-columns:repeat(4,1fr); } }
 
 .performance-band { fill: #708aaa; opacity: .14; }.performance-line.is-band { stroke: #708aaa; stroke-dasharray: 4 4; }
+.performance-end-label { font-size: 10px; font-weight: 700; dominant-baseline: middle; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chart-legend span::before { content: ''; width: 16px; height: 2px; border-radius: 999px; background: currentColor; }
 
 /* Business profit-and-loss statement. Kept at the end so it cannot be captured by older mobile-only blocks. */
 .income-statement-section { margin-top: 54px; padding-top: 42px; border-top: 1px solid var(--line); }
