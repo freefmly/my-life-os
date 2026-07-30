@@ -2,7 +2,7 @@ const storageKey = 'my-life-mvp-v1';
 const areas = { health: '건강', finance: '재무', business: '사업', relationship: '관계', hobby: '취미' };
 function goalAreaLabel(areaId) { return state?.growth?.domains?.find((domain) => domain.id === areaId)?.name || areas[areaId] || '나의 삶'; }
 let state = JSON.parse(localStorage.getItem(storageKey) || '{"vision":"","images":[],"goals":[]}');
-function safelyStoreLocal(key, value) { try { localStorage.setItem(key, value); return true; } catch (error) { console.warn(`Local storage write failed for ${key}; cloud sync will continue.`, error); return false; } }
+function safelyStoreLocal(key, value) { try { localStorage.setItem(key, value); return true; } catch (error) { console.warn(`Local storage write failed for ${key}.`, error); return false; } }
 function readKnowledgeGraphViewport() { try { const value = JSON.parse(localStorage.getItem('my-life-knowledge-viewport') || 'null'); return value && ['x', 'y', 'width', 'height'].every((key) => Number.isFinite(value[key])) ? value : null; } catch { return null; } }
 function storeLocalState() { return safelyStoreLocal(storageKey, JSON.stringify(state)); }
 const paletteSize = 5;
@@ -11,8 +11,8 @@ function normalizeState() { state.vision ||= ''; state.images = Array.isArray(st
 function normalizeKnowledgeState() { state.knowledge = Array.isArray(state.knowledge) ? state.knowledge.map((item) => ({ ...item, id: item.id || createGoalId(), title: String(item.title || ''), body: String(item.body || ''), source: String(item.source || ''), tags: Array.isArray(item.tags) ? [...new Set(item.tags.map((tag) => String(tag).trim()).filter(Boolean))] : [], links: Array.isArray(item.links) ? item.links : [], references: Array.isArray(item.references) ? item.references : [], bookReferences: Array.isArray(item.bookReferences) ? item.bookReferences.map((ref) => ({ bookId: String(ref.bookId || ''), location: String(ref.location || '') })).filter((ref) => ref.bookId) : [], literatureLinks: Array.isArray(item.literatureLinks) ? item.literatureLinks : [], createdAt: item.createdAt || new Date().toISOString() })) : []; state.wiki = Array.isArray(state.wiki) ? state.wiki.map((item) => ({ id: item.id || createGoalId(), title: String(item.title || ''), image: String(item.image || ''), description: String(item.description || ''), createdAt: item.createdAt || new Date().toISOString(), updatedAt: item.updatedAt || item.createdAt || new Date().toISOString() })).filter((item) => item.title) : []; state.knowledgeTags = [...new Set([...(Array.isArray(state.knowledgeTags) ? state.knowledgeTags : []), ...state.knowledge.flatMap((item) => item.tags)].map((tag) => String(tag).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')); state.fleetingNotes = Array.isArray(state.fleetingNotes) ? state.fleetingNotes.map((item) => ({ id: item.id || createGoalId(), content: String(item.content || ''), createdAt: item.createdAt || new Date().toISOString() })).filter((item) => item.content) : []; state.literatureNotes = Array.isArray(state.literatureNotes) ? state.literatureNotes.map((item) => ({ id: item.id || createGoalId(), content: String(item.content || ''), sourceType: String(item.sourceType || 'other'), sourceBookId: String(item.sourceBookId || ''), sourceTitle: String(item.sourceTitle || ''), sourceCreator: String(item.sourceCreator || ''), sourceUrl: String(item.sourceUrl || ''), createdAt: item.createdAt || new Date().toISOString() })).filter((item) => item.content) : []; state.knowledgeGraphPositions = state.knowledgeGraphPositions && typeof state.knowledgeGraphPositions === 'object' ? state.knowledgeGraphPositions : {}; }
 function discardWikiData() { if (!Object.prototype.hasOwnProperty.call(state, 'wiki')) return false; delete state.wiki; return true; }
 // Retire the library, knowledge, and content collections permanently. This runs on
-// every load, restore, and sync so older local or cloud records cannot reappear.
-function discardRetiredFeatureData(target = state) { if (!target || typeof target !== 'object') return false; const keys = ['books', 'contents', 'activeContentId', 'activeLoreTab', 'vaultPinHash', 'knowledge', 'wiki', 'knowledgeTags', 'fleetingNotes', 'literatureNotes', 'knowledgeGraphPositions', 'memories', 'people']; let changed = false; keys.forEach((key) => { if (Object.prototype.hasOwnProperty.call(target, key)) { delete target[key]; changed = true; } }); return changed; }
+// every load and restore so older local records cannot reappear.
+function discardRetiredFeatureData(target = state) { if (!target || typeof target !== 'object') return false; const keys = ['books', 'contents', 'activeContentId', 'activeLoreTab', 'vaultPinHash', 'knowledge', 'wiki', 'knowledgeTags', 'fleetingNotes', 'literatureNotes', 'knowledgeGraphPositions', 'memories', 'people', 'investments']; let changed = false; keys.forEach((key) => { if (Object.prototype.hasOwnProperty.call(target, key)) { delete target[key]; changed = true; } }); return changed; }
 function clearRetiredFeaturePreferences() { try { localStorage.removeItem('my-life-library-sort'); localStorage.removeItem('my-life-knowledge-viewport'); if (['library', 'knowledge', 'contents', 'memories', 'people'].includes(localStorage.getItem('my-life-active-view'))) localStorage.removeItem('my-life-active-view'); } catch (error) { console.warn('Retired feature preference cleanup failed.', error); } }
 function ensureOkrWorkspace() { if (state.okrWorkspaceVersion !== 1) { state.okrWorkspaceVersion = 1; state.okrWorkspace = { objectives: [], tasks: [] }; } state.okrWorkspace = state.okrWorkspace && Array.isArray(state.okrWorkspace.objectives) && Array.isArray(state.okrWorkspace.tasks) ? state.okrWorkspace : { objectives: [], tasks: [] }; }
 normalizeState();
@@ -27,7 +27,6 @@ function hasMeaningfulNonInvestmentData(value) { return Boolean(value?.vision ||
 function migrateLocalDataToEmptyCloud(remoteState) { if (!hasMeaningfulNonInvestmentData(localStateBeforeCloudLoad) || hasMeaningfulNonInvestmentData(remoteState)) return remoteState; const localNonInvestment = JSON.parse(JSON.stringify(localStateBeforeCloudLoad)); delete localNonInvestment.investments; return { ...remoteState, ...localNonInvestment, investments: remoteState.investments || localStateBeforeCloudLoad.investments }; }
 function normalizeVaultState() { discardRetiredFeatureData(); }
 normalizeVaultState();
-state.investments.tqqqVr.trades = Array.isArray(state.investments.tqqqVr.trades) ? state.investments.tqqqVr.trades : [];
 let editingGoalIndex = null;
 let draggedGoalIndex = null;
 let justDragged = false;
@@ -63,9 +62,6 @@ let vaultUnlocked = false;
 let vaultAutoLockTimer = null;
 let activeContentCollection = 'main';
 const $ = (selector) => document.querySelector(selector);
-const SUPABASE_URL = 'https://mkhqlqagnkskramfrnsa.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_3JsCcOOWE-0KAZizIElY9g_rer8gtoK';
-const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
 let signedInUser = null;
 let isLoadingCloudState = false;
 let cloudSaveTimer = null;
@@ -121,33 +117,16 @@ const familyAccountJournal = $('#familyAccountJournal');
 const pullToRefresh = $('#pullToRefresh');
 const pullToRefreshText = $('#pullToRefreshText');
 const profileDialog = $('#profileDialog');
-const authDialog = $('#authDialog');
-const authStatuses = document.querySelectorAll('[data-auth-status]');
-const authButtons = document.querySelectorAll('[data-auth-button]');
 let editingDomainId = null;
 let editingSkillId = null;
 let editingActivityId = null;
-let editingVrCycleId = null;
-let editingVrTradeId = null;
-let editingSoxlTradeId = null;
-let investmentDisplayCurrency = 'USD';
-let usdKrwRate = null;
-let usdKrwRateDate = '';
-let exchangeRateLoadPromise = null;
-let exchangeRateLoadFailed = false;
-let activeFamilyAccountId = 'mother';
-let marketQuotes = {};
-let marketQuoteRefreshPromise = null;
-let marketQuoteSnapshotDay = '';
-let tqqqChartRange = 'day';
-let familyChartRange = 'day';
 
 function cloneCloudState(value) { return value === undefined ? undefined : JSON.parse(JSON.stringify(value)); }
 function cloudStatePayload(value) { const payload = cloneCloudState(value); if (!payload) return payload; discardRetiredFeatureData(payload); payload.businessSnapshots = []; if (payload.investments?.soxl) payload.investments.soxl.snapshots = []; if (payload.investments?.tqqqVr) payload.investments.tqqqVr.snapshots = []; Object.values(payload.investments?.familyAccounts || {}).forEach((account) => { account.snapshots = []; }); return payload; }
 function cloudValuesEqual(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
-function scheduleCloudSave(delay = 700) { if (!signedInUser || isLoadingCloudState) return; clearTimeout(cloudSaveTimer); cloudSaveTimer = setTimeout(() => { saveCloudState(); }, delay); }
+function scheduleCloudSave(delay = 700) { return; }
 function scheduleInvestmentSnapshotSync(delay = 700) { return; }
-function persist() { discardRetiredFeatureData(); storeLocalState(); if (signedInUser && !isLoadingCloudState) { cloudHasLocalChanges = true; scheduleCloudSave(); } }
+function persist() { discardRetiredFeatureData(); storeLocalState(); }
 function escapeHtml(text) { const el = document.createElement('div'); el.textContent = text; return el.innerHTML; }
 function formatDate(value) { if (!value) return '언젠가'; const [year, month] = value.split('-'); return `${year}.${month}`; }
 function formatNumber(value) { return new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value); }
@@ -222,7 +201,7 @@ function investmentNumber(value) { return Number(value) || 0; }
 const investmentChartColors = { total: '#315c4a', realized: '#7f9140', valuation: '#b58a45', cash: '#6f8f8a' };
 function formatInvestmentMoney(value) { const amount = investmentNumber(value); if (investmentDisplayCurrency === 'KRW' && usdKrwRate) return formatInvestmentWon(amount * usdKrwRate); return `$${formatNumber(amount)}`; }
 function marketQuotePrice(symbol, fallback = 0) { return investmentNumber(marketQuotes[symbol]?.price) || investmentNumber(fallback); }
-async function refreshMarketQuotes() { if (marketQuoteRefreshPromise) return marketQuoteRefreshPromise; marketQuoteRefreshPromise = fetch(`${SUPABASE_URL}/functions/v1/market-quotes`, { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}` } }).then(async (response) => { if (!response.ok) throw new Error('market quote request failed'); const data = await response.json(); marketQuotes = data.quotes || {}; const day = seoulDayKey(); ensureDailyInvestmentSnapshots({ updateToday: marketQuoteSnapshotDay !== day }); marketQuoteSnapshotDay = day; renderInvestments(); return marketQuotes; }).catch((error) => { console.warn('Market quotes unavailable', error); ensureDailyInvestmentSnapshots(); return null; }).finally(() => { marketQuoteRefreshPromise = null; }); return marketQuoteRefreshPromise; }
+async function refreshMarketQuotes() { ensureDailyInvestmentSnapshots(); return null; }
 function investmentDate(value) { return new Intl.DateTimeFormat('ko-KR', { month: 'short', day: 'numeric' }).format(new Date(value)); }
 function investmentMetric(label, value, tone = '', detail = '') { return `<article class="investment-metric ${tone}"><span>${label}</span><strong class="${detail.includes('negative') ? 'negative' : detail.includes('positive') ? 'positive' : ''}">${value}</strong>${detail && !detail.includes('negative') && !detail.includes('positive') ? `<span>${detail}</span>` : ''}</article>`; }
 function investmentAllocationDonut(title, description, segments) { const total = segments.reduce((sum, segment) => sum + Math.max(0, investmentNumber(segment.value)), 0); let accumulated = 0; const stops = segments.map((segment) => { const start = total ? (accumulated / total) * 100 : 0; accumulated += Math.max(0, investmentNumber(segment.value)); const end = total ? (accumulated / total) * 100 : 0; return `${segment.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`; }).join(', '); const legend = segments.map((segment) => { const value = investmentNumber(segment.value); const ratio = total ? Math.max(0, value) / total * 100 : 0; return `<li><i style="background:${segment.color}"></i><span>${segment.label}</span><strong>${formatInvestmentMoney(value)}</strong><b>${formatPercent(ratio)}</b></li>`; }).join(''); return `<section class="investment-allocation-card"><div class="allocation-heading"><p class="eyebrow">CURRENT ALLOCATION</p><h3>${title}</h3><p>${description}</p></div><div class="allocation-body"><div class="allocation-donut" role="img" aria-label="${escapeHtml(title)}" style="background:conic-gradient(${stops || '#e8e8e1 0 100%'})"><div><strong>${total ? formatInvestmentMoney(total) : '—'}</strong><span>현재 합계</span></div></div><ul class="allocation-legend">${legend}</ul></div></section>`; }
@@ -275,7 +254,7 @@ function renderInvestments() {
   const vr = state.investments.tqqqVr;
   $('#vrModeSelect').value = vr.mode || 'installment';
   $('#toggleInvestmentCurrency').textContent = investmentDisplayCurrency === 'KRW' ? 'USD 보기' : '원화 보기';
-  $('#exchangeRateCaption').textContent = usdKrwRate ? `현재 USD/KRW ${formatNumber(usdKrwRate)}원${usdKrwRateDate ? ` · ${usdKrwRateDate}` : ''}` : exchangeRateLoadFailed ? '환율 정보를 불러오지 못했어요' : '환율 불러오는 중…';
+  $('#exchangeRateCaption').textContent = usdKrwRate ? `USD/KRW ${formatNumber(usdKrwRate)}원${usdKrwRateDate ? ` · ${usdKrwRateDate}` : ''}` : '원화 표시는 수동 환율 입력 후 사용할 수 있어요';
   $('#toggleSoxlFeeButton').textContent = `구독료 반영: ${soxl.includeFee !== false ? '켜짐' : '꺼짐'}`;
   renderFamilyAccount();
   const includeFee = soxl.includeFee !== false;
@@ -417,7 +396,6 @@ function investmentSnapshotRows() { const rows = []; const add = (snapshotType, 
 function investmentSnapshotMapKey(row) { return `${row.snapshot_type}:${row.account_id}:${row.snapshot_key}`; }
 async function syncInvestmentSnapshots() { return null; }
 async function loadInvestmentSnapshots() { return null; }
-function updateAuthUI(message = '') { const status = message || (signedInUser ? signedInUser.email || '동기화됨' : '로컬 모드'); const buttonLabel = signedInUser ? '로그아웃' : '로그인 · 동기화'; authStatuses.forEach((element) => { element.textContent = status; }); authButtons.forEach((button) => { button.textContent = buttonLabel; }); }
 const contentTypes = { webtoon: '웹툰', movie: '영화', drama: '드라마', game: '게임', novel: '소설 · 웹소설', other: '기타' };
 const contentStatuses = { active: '즐기는 중', paused: '잠시 보류', finished: '완료', wishlist: '나중에' };
 const loreTypes = { character: '인물', group: '종족 · 집단', organization: '조직 · 국가', place: '장소', term: '용어 · 능력', event: '사건' };
@@ -503,104 +481,6 @@ function renderContents() { const content = activeContent(); contentList.innerHT
   $('#loreTree').innerHTML = roots.length ? roots.map(branch).join('') : `<div class="lore-empty">아직 ${loreTypes[loreTab]} 설정이 없어요.</div>`;
   return;
 }
-function applyCloudState(nextState, message = '동기화됨') { const localSnapshots = signedInUser ? { business: state.businessSnapshots, soxl: state.investments?.soxl?.snapshots, vr: state.investments?.tqqqVr?.snapshots, family: Object.fromEntries(Object.entries(state.investments?.familyAccounts || {}).map(([id, account]) => [id, account.snapshots])) } : null; state = cloneCloudState(nextState || {}); normalizeState(); if (localSnapshots) { state.businessSnapshots = localSnapshots.business || []; state.investments.soxl.snapshots = localSnapshots.soxl || []; state.investments.tqqqVr.snapshots = localSnapshots.vr || []; Object.entries(localSnapshots.family).forEach(([id, snapshots]) => { if (state.investments.familyAccounts[id]) state.investments.familyAccounts[id].snapshots = snapshots || []; }); } ensureOkrWorkspace(); normalizeKnowledgeState(); const removedFeatureData = discardRetiredFeatureData(); normalizeVaultState(); if (removedFeatureData) { cloudHasLocalChanges = true; if (!isLoadingCloudState) scheduleCloudSave(0); } ensureDailyInvestmentSnapshots(); storeLocalState(); render(); updateAuthUI(message); }
-function unsubscribeCloudState() { if (cloudChannel && supabaseClient) supabaseClient.removeChannel(cloudChannel); cloudChannel = null; }
-function receiveCloudState(remoteState) {
-  if (!signedInUser || !remoteState || typeof remoteState !== 'object') return;
-  if (cloudHasLocalChanges) return;
-  if (Date.now() - okrLocalChangeAt < 5000) return;
-  applyCloudState(remoteState, '다른 기기 변경 반영됨');
-}
-function subscribeToCloudState() {
-  if (!supabaseClient || !signedInUser) return;
-  unsubscribeCloudState();
-  const userId = signedInUser.id;
-  cloudChannel = supabaseClient.channel(`life-state-${userId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'life_app_states', filter: `user_id=eq.${userId}` }, (payload) => {
-      if (payload.eventType !== 'DELETE' && payload.new?.data) receiveCloudState(payload.new.data);
-    })
-    .subscribe((status) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') updateAuthUI('실시간 연결 재시도 중…');
-    });
-}
-async function saveCloudState() {
-  if (!supabaseClient || !signedInUser || isLoadingCloudState) return cloudSavePromise;
-  if (cloudSavePromise) return cloudSavePromise;
-  clearTimeout(cloudSaveTimer);
-  const userId = signedInUser.id;
-  cloudSavePromise = (async () => {
-    try {
-      const payload = cloudStatePayload(state);
-      const { error } = await supabaseClient.from('life_app_states').upsert({ user_id: userId, data: payload, updated_at: new Date().toISOString() });
-      if (error) throw error;
-      cloudRetryCount = 0;
-      cloudHasLocalChanges = !cloudValuesEqual(cloudStatePayload(state), payload);
-      updateAuthUI(cloudHasLocalChanges ? '동기화 중…' : '동기화됨');
-      if (cloudHasLocalChanges) scheduleCloudSave(100);
-    } catch (error) {
-      console.error(error);
-      cloudHasLocalChanges = true;
-      cloudRetryCount = Math.min(cloudRetryCount + 1, 6);
-      updateAuthUI('동기화 재시도 대기 중');
-      scheduleCloudSave(Math.min(30000, 1000 * (2 ** cloudRetryCount)));
-    } finally {
-      cloudSavePromise = null;
-    }
-  })();
-  return cloudSavePromise;
-}
-async function loadCloudState() {
-  if (!supabaseClient || !signedInUser) return;
-  if (cloudStateLoadPromise) return cloudStateLoadPromise;
-  const userId = signedInUser.id;
-  cloudStateLoadPromise = (async () => {
-    isLoadingCloudState = true;
-    clearTimeout(cloudSaveTimer);
-    updateAuthUI('동기화 중…');
-    try {
-      let result;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        result = await supabaseClient.from('life_app_states').select('data').eq('user_id', userId).maybeSingle();
-        if (!result.error) break;
-        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900 * (attempt + 1)));
-      }
-      const { data, error } = result || {};
-      if (error) throw error;
-      if (userId !== signedInUser?.id) return;
-      if (data?.data && Object.keys(data.data).length) {
-        const serverState = migrateLocalDataToEmptyCloud(data.data);
-        const migratedLocalData = !cloudValuesEqual(serverState, data.data);
-        cloudHasLocalChanges = migratedLocalData;
-        applyCloudState(serverState, migratedLocalData ? '이 기기의 기존 데이터를 서버로 이관 중…' : '동기화됨');
-        await loadInvestmentSnapshots();
-      } else {
-        applyCloudState(localStateBeforeCloudLoad);
-        cloudHasLocalChanges = true;
-      }
-      subscribeToCloudState();
-    } catch (error) {
-      console.error(error);
-      updateAuthUI('동기화 연결 실패');
-    } finally {
-      isLoadingCloudState = false;
-      cloudStateLoadPromise = null;
-    }
-    if (cloudHasLocalChanges) scheduleCloudSave(0);
-  })();
-  return cloudStateLoadPromise;
-}
-async function applySession(session) {
-  const nextUser = session?.user || null;
-  if ((nextUser?.id || null) !== (signedInUser?.id || null)) {
-    unsubscribeCloudState();
-    cloudHasLocalChanges = false;
-    clearTimeout(cloudSaveTimer);
-  }
-  signedInUser = nextUser;
-  updateAuthUI();
-  if (signedInUser) await loadCloudState();
-}
-async function initializeCloudSync() { if (!supabaseClient) { updateAuthUI('연결 불가'); return; } const { data } = await supabaseClient.auth.getSession(); await applySession(data.session); supabaseClient.auth.onAuthStateChange((_event, session) => { if ((session?.user?.id || null) !== (signedInUser?.id || null)) setTimeout(() => applySession(session), 0); }); }
 const knowledgeKinds = { knowledge: '지식', domain: '영역', skill: '스킬', book: '책', content: '콘텐츠' };
 function knowledgeReferenceEntries() {
   return [
@@ -678,7 +558,6 @@ function render() {
   achievementList.innerHTML = completedOkrs.length ? completedOkrs.map((achievement) => { const date = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(achievement.achievedAt)); const detail = `${formatNumber(achievement.targetValue)}${escapeHtml(achievement.unit)} 달성 · ${date}`; return `<article class="achievement-card goal-tone-${achievement.colorIndex}"><span class="achievement-icon">✦</span><div><span class="goal-area">${escapeHtml(goalAreaLabel(achievement.area))}</span><h3>${escapeHtml(achievement.title)}</h3><p>${detail}</p></div></article>`; }).join('') : '<div class="no-goals">아직 달성된 OKR이 없어요. 첫 완주를 기다리고 있어요.</div>';
   Object.entries(taskLists).forEach(([status, list]) => { const tasks = state.tasks.filter((task) => task.status === status); const goalTitle = (task) => state.goals.find((goal) => goal.id === task.goalId)?.title; $(`#${status}TaskCount`).textContent = tasks.length ? String(tasks.length) : ''; list.innerHTML = tasks.length ? tasks.map((task) => `<article class="task-card"><label class="task-check"><input type="checkbox" data-complete-task="${task.id}" ${task.status === 'done' ? 'checked disabled' : ''} /><span></span></label><div><strong>${escapeHtml(task.title)}</strong>${goalTitle(task) ? `<small>↳ ${escapeHtml(goalTitle(task))}</small>` : ''}${task.dueDate ? `<small>${escapeHtml(task.dueDate)}</small>` : ''}</div><div class="task-actions"><button class="text-button" type="button" data-edit-task="${task.id}" aria-label="할 일 수정">···</button><button class="text-button danger-button" type="button" data-delete-task="${task.id}" aria-label="할 일 삭제">×</button></div></article>`).join('') : '<div class="task-empty">비어 있어요.</div>'; });
   renderAccounting();
-  renderInvestments();
   renderGrowth();
   renderOkrWorkspace();
 }
@@ -922,42 +801,6 @@ $('#incomeStatementForm').addEventListener('submit', (event) => { event.preventD
 $('#incomeStatementYear').addEventListener('change', renderAnnualIncomeStatement);
 function xmlCell(value, type = 'String') { return `<Cell><Data ss:Type="${type}">${String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Data></Cell>`; }
 $('#exportIncomeStatementButton').addEventListener('click', () => { const year = selectedIncomeYear(); const annual = annualIncomeRows(year); const rows = [[`사업소득 손익계산서 (${year}년)`], ['구분', ...Array.from({ length: 12 }, (_, index) => `${index + 1}월`), '합계'], ...annual.rows.map((row) => [row.label, ...row.values, row.values.reduce((total, value) => total + value, 0)]), [], ['작성 안내', '매출 및 필요경비 정리용 초안입니다. 증빙과 세무 기준을 확인 후 신고에 사용하세요.']]; const sheetRows = rows.map((row) => `<Row>${row.map((value, index) => xmlCell(value, typeof value === 'number' && index > 0 ? 'Number' : 'String')).join('')}</Row>`).join(''); const xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="손익계산서"><Table>${sheetRows}</Table></Worksheet></Workbook>`; const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `사업소득_손익계산서_${year}.xls`; document.body.append(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url); });
-async function fetchJsonWithTimeout(url, timeout = 8000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const response = await fetch(url, { signal: controller.signal }); if (!response.ok) throw new Error('rate fetch failed'); return await response.json(); } finally { clearTimeout(timer); } }
-async function loadUsdKrwRate() { const [frankfurter, exchangeRate] = await Promise.allSettled([fetchJsonWithTimeout('https://api.frankfurter.dev/v2/rate/USD/KRW'), fetchJsonWithTimeout('https://open.er-api.com/v6/latest/USD')]); const primary = frankfurter.status === 'fulfilled' ? frankfurter.value : null; const backup = exchangeRate.status === 'fulfilled' ? exchangeRate.value : null; const rate = Number(primary?.rate || backup?.rates?.KRW); if (!rate) throw new Error('invalid rate'); usdKrwRate = rate; usdKrwRateDate = primary?.date || backup?.time_last_update_utc?.slice(5, 16) || ''; return rate; }
-function ensureUsdKrwRate() { if (usdKrwRate) return Promise.resolve(usdKrwRate); if (!exchangeRateLoadPromise) { exchangeRateLoadFailed = false; exchangeRateLoadPromise = loadUsdKrwRate().catch((error) => { exchangeRateLoadFailed = true; throw error; }).finally(() => { exchangeRateLoadPromise = null; }); } return exchangeRateLoadPromise; }
-function familySymbolOptions() { return Object.keys(activeFamilyAccount().holdings).map((symbol) => `<option value="${symbol}">${symbol}</option>`).join(''); }
-function openFamilyContributionDialog() { const account = activeFamilyAccount(); $('#familyContributionForm').reset(); $('#familyContributionTitle').textContent = `${account.name} 계좌 적립금 기록`; $('#familyContributionDate').value = new Date().toISOString().slice(0, 10); $('#familyContributionDialog').showModal(); $('#familyContributionAmount').focus(); }
-function openFamilyTradeDialog() { const account = activeFamilyAccount(); $('#familyTradeForm').reset(); $('#familyTradeTitle').textContent = `${account.name} 계좌 매수·매도 기록`; $('#familyTradeSymbol').innerHTML = familySymbolOptions(); $('#familyTradeDate').value = new Date().toISOString().slice(0, 10); $('#familyTradeDialog').showModal(); $('#familyTradeShares').focus(); }
-function selectInvestmentAccount(accountId) { if (accountId !== 'mine' && state.investments.familyAccounts[accountId]) activeFamilyAccountId = accountId; document.querySelectorAll('[data-investment-account]').forEach((item) => item.classList.toggle('is-active', item.dataset.investmentAccount === accountId)); document.querySelectorAll('[data-investment-account-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.investmentAccountPanel === (accountId === 'mine' ? 'mine' : 'family'))); if (accountId !== 'mine') renderFamilyAccount(); }
-document.querySelectorAll('[data-investment-account]').forEach((tab) => tab.addEventListener('click', () => selectInvestmentAccount(tab.dataset.investmentAccount)));
-document.querySelectorAll('[data-investment-tab]').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('[data-investment-tab]').forEach((item) => item.classList.toggle('is-active', item === tab)); document.querySelectorAll('[data-investment-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.investmentPanel === tab.dataset.investmentTab)); }));
-function openSoxlSnapshotDialog() { const soxl = state.investments.soxl; [['soxlPrincipal', 'principal'], ['soxlShares', 'shares'], ['soxlAveragePrice', 'averagePrice'], ['soxlSubscriptionFee', 'subscriptionFeeKrw']].forEach(([input, key]) => { $(`#${input}`).value = soxl[key] || ''; }); $('#soxlSnapshotDialog').showModal(); $('#soxlPrincipal').focus(); }
-function openSoxlTradeDialog(tradeId = null) { const trade = tradeId ? state.investments.soxl.trades.find((item) => item.id === tradeId) : null; editingSoxlTradeId = trade?.id || null; $('#soxlTradeForm').reset(); $('#soxlTradeDate').value = trade?.date || new Date().toISOString().slice(0, 10); $('#soxlTradeType').value = trade?.type || 'buy'; $('#soxlTradeShares').value = trade?.shares || ''; $('#soxlTradePrice').value = trade?.price || ''; $('#soxlTradeFee').value = trade?.fee || ''; $('#soxlTradeNote').value = trade?.note || ''; $('#soxlTradeDialog h2').textContent = trade ? '매매 기록 수정' : '매수·매도 기록'; $('#soxlTradeDialog .save-button').textContent = trade ? '수정 저장' : '거래 저장'; $('#soxlTradeDialog').showModal(); $('#soxlTradeShares').focus(); }
-function applySoxlTrade(trade, direction = 1) { const soxl = state.investments.soxl; const shares = investmentNumber(trade.shares); const price = investmentNumber(trade.price); const gross = tradeGrossAmount(trade); const fee = tradeFee(trade); const previousShares = investmentNumber(soxl.shares); const previousCash = Number.isFinite(Number(soxl.cash)) ? investmentNumber(soxl.cash) : investmentNumber(soxl.principal) - (previousShares * investmentNumber(soxl.averagePrice)); let nextShares = previousShares; let nextAveragePrice = investmentNumber(soxl.averagePrice); if (!shares || !price) return false; if (trade.type === 'buy') { const totalCost = gross + fee; if (direction > 0) { if (totalCost > previousCash) { alert('예수금이 부족해요. 먼저 투자원금을 수정해주세요.'); return false; } nextAveragePrice = (previousShares * nextAveragePrice + totalCost) / (previousShares + shares); nextShares = previousShares + shares; } else { if (shares > previousShares) return false; nextShares = previousShares - shares; nextAveragePrice = nextShares ? Math.max(0, ((previousShares * nextAveragePrice) - totalCost) / nextShares) : 0; } } else if (direction > 0) { if (shares > previousShares) return false; nextShares = previousShares - shares; if (!nextShares) nextAveragePrice = 0; } else { nextShares = previousShares + shares; if (!nextAveragePrice) nextAveragePrice = price; } soxl.shares = nextShares; soxl.averagePrice = nextAveragePrice; soxl.purchaseAmount = nextShares * nextAveragePrice; soxl.cash = previousCash + (tradeCashDelta(trade) * direction); soxl.valuation = nextShares * marketQuotePrice('SOXL', price); return true; }
-function syncVrFlowField() { const mode = state.investments.tqqqVr.mode || 'installment'; const field = $('#vrFlowField'); field.hidden = mode === 'lump-sum'; field.firstChild.textContent = mode === 'withdrawal' ? '2주 인출액 (USD)' : '2주 Pool 적립금 (USD)'; $('#vrFlowAmount').required = mode !== 'lump-sum'; }
-function openVrCycleDialog(cycleId = null) { const vr = state.investments.tqqqVr; editingVrCycleId = cycleId; const cycle = cycleId ? vr.cycles.find((item) => item.id === cycleId) : currentVrCycle(); const isEditing = Boolean(cycleId && cycle); const position = cycle ? calculateVrPosition(cycle) : null; $('#vrCycleForm').reset(); $('#vrCycleDate').value = isEditing ? cycle.date : new Date().toISOString().slice(0, 10); if (cycle) { [['vrTargetValue', 'targetValue'], ['vrGValue', 'gValue'], ['vrLowerBand', 'lowerBand'], ['vrUpperBand', 'upperBand']].forEach(([input, key]) => { $(`#${input}`).value = cycle[key] || ''; }); $('#vrPool').value = isEditing ? cycle.pool || '' : position.pool || ''; $('#vrShares').value = isEditing ? cycle.shares || '' : position.shares || ''; $('#vrAveragePrice').value = isEditing ? cycle.averagePrice || '' : position.averagePrice || ''; $('#vrCurrentPrice').value = isEditing ? cycle.currentPrice || '' : position.currentPrice || ''; } $('#vrCycleNote').value = isEditing ? cycle.note || '' : ''; $('#vrFlowAmount').value = isEditing ? cycle.flowAmount || '' : vr.mode === 'withdrawal' ? vr.withdrawal || '' : vr.contribution || ''; $('#vrCycleDialog h2').textContent = isEditing ? '리밸런싱 사이클 수정' : '새 리밸런싱 사이클'; $('#vrCycleDialog .save-button').textContent = isEditing ? '수정 저장' : '사이클 저장'; syncVrFlowField(); $('#vrCycleDialog').showModal(); $('#vrTargetValue').focus(); }
-function openVrTradeDialog(tradeId = null) { const cycle = currentVrCycle(); if (!cycle) { alert('먼저 새 리밸런싱 사이클을 시작해주세요.'); return; } const trade = tradeId ? state.investments.tqqqVr.trades.find((item) => item.id === tradeId && item.cycleId === cycle.id) : null; editingVrTradeId = trade?.id || null; $('#vrTradeForm').reset(); $('#vrTradeDate').value = trade?.date || new Date().toISOString().slice(0, 10); $('#vrTradeType').value = trade?.type || 'buy'; $('#vrTradeShares').value = trade?.shares || ''; $('#vrTradePrice').value = trade?.price || ''; $('#vrTradeFee').value = trade?.fee || ''; $('#vrTradeNote').value = trade?.note || ''; $('#vrTradeDialog h2').textContent = trade ? '리밸런싱 기록 수정' : '리밸런싱 기록'; $('#vrTradeDialog .save-button').textContent = trade ? '수정 저장' : '거래 저장'; $('#vrTradeDialog').showModal(); $('#vrTradeShares').focus(); }
-$('#editSoxlSnapshotButton').addEventListener('click', openSoxlSnapshotDialog);
-$('#addSoxlTradeButton').addEventListener('click', openSoxlTradeDialog);
-$('#resetSoxlButton').addEventListener('click', () => { if (!confirm('SOXL의 투자원금, 보유 현황, 구독료, 매매 기록, 그래프 기록을 모두 초기화할까요?\n이 작업은 되돌릴 수 없습니다.')) return; state.investments.soxl = createDefaultInvestments().soxl; persist(); render(); });
-soxlTradeList.addEventListener('click', (event) => { const edit = event.target.closest('[data-edit-soxl-trade]'); const remove = event.target.closest('[data-delete-soxl-trade]'); if (edit) { openSoxlTradeDialog(edit.dataset.editSoxlTrade); return; } if (!remove) return; const trade = state.investments.soxl.trades.find((item) => item.id === remove.dataset.deleteSoxlTrade); if (!trade || !confirm('이 SOXL 매매 기록을 삭제할까요?\n현재 보유 현황과 해당 날짜의 그래프 기록도 함께 되돌려집니다.')) return; if (!applySoxlTrade(trade, -1)) { alert('현재 보유 현황과 맞지 않아 이 기록을 삭제할 수 없어요. 먼저 이후 거래 또는 현재 현황을 확인해주세요.'); return; } removeSoxlTradeSnapshot(trade.id, trade.date); state.investments.soxl.trades = state.investments.soxl.trades.filter((item) => item.id !== trade.id); persist(); render(); });
-$('#addVrCycleButton').addEventListener('click', () => openVrCycleDialog());
-$('#addVrTradeButton').addEventListener('click', openVrTradeDialog);
-$('#addFamilyContributionButton').addEventListener('click', openFamilyContributionDialog);
-$('#addFamilyTradeButton').addEventListener('click', openFamilyTradeDialog);
-tqqqChartRangeTabs.forEach((tab) => tab.addEventListener('click', () => { tqqqChartRange = tab.dataset.tqqqChartRange; renderInvestments(); }));
-familyChartRangeTabs.forEach((tab) => tab.addEventListener('click', () => { familyChartRange = tab.dataset.familyChartRange; renderFamilyAccount(); }));
-vrTradeList.addEventListener('click', (event) => { const edit = event.target.closest('[data-edit-vr-trade]'); const remove = event.target.closest('[data-delete-vr-trade]'); if (edit) { openVrTradeDialog(edit.dataset.editVrTrade); return; } if (!remove) return; const vr = state.investments.tqqqVr; const trade = vr.trades.find((item) => item.id === remove.dataset.deleteVrTrade); if (!trade || !confirm('이 TQQQ VR 리밸런싱 기록을 삭제할까요?\n이번 사이클의 포지션과 해당 날짜의 그래프 기록도 다시 계산됩니다.')) return; vr.trades = vr.trades.filter((item) => item.id !== trade.id); refreshTqqqVrTradeSnapshot(trade.id, trade.date); persist(); render(); });
-tqqqCycleList.addEventListener('click', (event) => { const edit = event.target.closest('[data-edit-vr-cycle]'); const remove = event.target.closest('[data-delete-vr-cycle]'); if (edit) { openVrCycleDialog(edit.dataset.editVrCycle); return; } if (remove) { const cycleId = remove.dataset.deleteVrCycle; const index = state.investments.tqqqVr.cycles.findIndex((cycle) => cycle.id === cycleId); if (index < 0 || !confirm('이 리밸런싱 사이클 기록을 삭제할까요?\n이 사이클의 매수·매도 기록과 그래프도 함께 사라집니다.')) return; state.investments.tqqqVr.cycles.splice(index, 1); state.investments.tqqqVr.trades = state.investments.tqqqVr.trades.filter((trade) => trade.cycleId !== cycleId); persist(); render(); } });
-$('#vrModeSelect').addEventListener('change', (event) => { state.investments.tqqqVr.mode = event.target.value; persist(); renderInvestments(); });
-$('#toggleInvestmentCurrency').addEventListener('click', async (event) => { const button = event.currentTarget; if (investmentDisplayCurrency === 'KRW') { investmentDisplayCurrency = 'USD'; renderInvestments(); return; } button.textContent = '환율 불러오는 중…'; button.disabled = true; try { await ensureUsdKrwRate(); investmentDisplayCurrency = 'KRW'; } catch { alert('환율을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); } finally { button.disabled = false; renderInvestments(); } });
-$('#toggleSoxlFeeButton').addEventListener('click', (event) => { state.investments.soxl.includeFee = state.investments.soxl.includeFee === false; event.currentTarget.textContent = `구독료 반영: ${state.investments.soxl.includeFee ? '켜짐' : '꺼짐'}`; persist(); renderInvestments(); });
-$('#soxlSnapshotForm').addEventListener('submit', async (event) => { event.preventDefault(); const soxl = state.investments.soxl; const subscriptionFeeKrw = investmentNumber($('#soxlSubscriptionFee').value); try { const rate = subscriptionFeeKrw ? await loadUsdKrwRate() : 1; [['principal', 'soxlPrincipal'], ['shares', 'soxlShares'], ['averagePrice', 'soxlAveragePrice']].forEach(([key, input]) => { soxl[key] = investmentNumber($(`#${input}`).value); }); soxl.purchaseAmount = investmentNumber(soxl.shares) * investmentNumber(soxl.averagePrice); soxl.cash = investmentNumber(soxl.principal) - soxl.purchaseAmount; soxl.valuation = investmentNumber(soxl.shares) * marketQuotePrice('SOXL', investmentNumber(soxl.valuation) / Math.max(investmentNumber(soxl.shares), 1)); soxl.subscriptionFeeKrw = subscriptionFeeKrw; soxl.subscriptionFeeUsd = subscriptionFeeKrw ? subscriptionFeeKrw / rate : 0; updateLatestSoxlSnapshot(); persist(); render(); $('#soxlSnapshotDialog').close(); } catch { alert('구독료 환산을 위한 환율을 불러오지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.'); } });
-$('#soxlTradeForm').addEventListener('submit', (event) => { event.preventDefault(); const soxl = state.investments.soxl; const type = $('#soxlTradeType').value; const shares = investmentNumber($('#soxlTradeShares').value); const price = investmentNumber($('#soxlTradePrice').value); const fee = investmentNumber($('#soxlTradeFee').value); const nextTrade = { id: editingSoxlTradeId || createGoalId(), date: $('#soxlTradeDate').value, type, shares, price, fee, amount: type === 'buy' ? (shares * price) + fee : (shares * price) - fee, note: $('#soxlTradeNote').value.trim() }; if (!shares || !price) return; const existing = editingSoxlTradeId ? soxl.trades.find((item) => item.id === editingSoxlTradeId) : null; const backup = { shares: soxl.shares, averagePrice: soxl.averagePrice, cash: soxl.cash, purchaseAmount: soxl.purchaseAmount, valuation: soxl.valuation }; if (existing && !applySoxlTrade(existing, -1)) { alert('현재 보유 현황과 맞지 않아 이 기록을 수정할 수 없어요. 먼저 이후 거래 또는 현재 현황을 확인해주세요.'); return; } if (!applySoxlTrade(nextTrade)) { Object.assign(soxl, backup); alert('현재 보유 수량보다 많이 매도할 수 없어요.'); return; } if (existing) { removeSoxlTradeSnapshot(existing.id, existing.date); soxl.trades[soxl.trades.findIndex((item) => item.id === existing.id)] = nextTrade; snapshotSoxl(`${nextTrade.date}T12:00:00`); } else { soxl.trades.unshift(nextTrade); snapshotSoxl(`${nextTrade.date}T12:00:00`); } persist(); render(); $('#soxlTradeDialog').close(); });
-$('#vrCycleForm').addEventListener('submit', (event) => { event.preventDefault(); const vr = state.investments.tqqqVr; const mode = vr.mode || 'installment'; const flowAmount = mode === 'lump-sum' ? 0 : investmentNumber($('#vrFlowAmount').value); if (mode === 'installment') vr.contribution = flowAmount; if (mode === 'withdrawal') vr.withdrawal = flowAmount; const existing = editingVrCycleId ? vr.cycles.find((item) => item.id === editingVrCycleId) : null; const cycle = { id: existing?.id || createGoalId(), date: $('#vrCycleDate').value, targetValue: investmentNumber($('#vrTargetValue').value), gValue: investmentNumber($('#vrGValue').value), lowerBand: investmentNumber($('#vrLowerBand').value), upperBand: investmentNumber($('#vrUpperBand').value), pool: investmentNumber($('#vrPool').value), shares: investmentNumber($('#vrShares').value), averagePrice: investmentNumber($('#vrAveragePrice').value), currentPrice: investmentNumber($('#vrCurrentPrice').value), flowAmount, note: $('#vrCycleNote').value.trim() }; if (existing) vr.cycles[vr.cycles.findIndex((item) => item.id === existing.id)] = cycle; else vr.cycles.push(cycle); snapshotTqqqVr(`${cycle.date}T21:30:00.000Z`, cycle); persist(); render(); $('#vrCycleDialog').close(); });
-$('#vrTradeForm').addEventListener('submit', (event) => { event.preventDefault(); const cycle = currentVrCycle(); if (!cycle) return; const vr = state.investments.tqqqVr; const type = $('#vrTradeType').value; const shares = investmentNumber($('#vrTradeShares').value); const price = investmentNumber($('#vrTradePrice').value); const fee = investmentNumber($('#vrTradeFee').value); if (!shares || !price) return; const existing = editingVrTradeId ? vr.trades.find((item) => item.id === editingVrTradeId && item.cycleId === cycle.id) : null; const position = calculateVrPosition(cycle, existing?.id || null); const gross = shares * price; if (type === 'buy' && gross + fee > position.pool) { alert('Pool 예수금이 부족해요. 수수료까지 포함해 확인해주세요.'); return; } if (type === 'sell' && shares > position.shares) { alert('현재 보유 수량보다 많이 매도할 수 없어요.'); return; } cycle.currentPrice = price; cycle.priceUpdatedAt = $('#vrTradeDate').value; const date = $('#vrTradeDate').value; const trade = { id: existing?.id || createGoalId(), cycleId: cycle.id, date, type, shares, price, fee, note: $('#vrTradeNote').value.trim() }; if (existing) { vr.trades[vr.trades.findIndex((item) => item.id === existing.id)] = trade; if (String(existing.date).slice(0, 10) !== String(date).slice(0, 10)) refreshTqqqVrTradeSnapshot(existing.id, existing.date); } else { vr.trades.push(trade); } snapshotTqqqVr(`${date}T21:30:00.000Z`); persist(); render(); $('#vrTradeDialog').close(); });
-$('#familyContributionForm').addEventListener('submit', (event) => { event.preventDefault(); const account = activeFamilyAccount(); const amount = investmentNumber($('#familyContributionAmount').value); if (!amount) return; const date = $('#familyContributionDate').value; account.contributed = investmentNumber(account.contributed) + amount; account.cash = investmentNumber(account.cash) + amount; account.contributions.unshift({ id: createGoalId(), date, amount, note: $('#familyContributionNote').value.trim() }); snapshotFamilyAccount(account, `${date}T12:00:00`); persist(); render(); $('#familyContributionDialog').close(); });
-$('#familyTradeForm').addEventListener('submit', (event) => { event.preventDefault(); const account = activeFamilyAccount(); const symbol = $('#familyTradeSymbol').value; const type = $('#familyTradeType').value; const shares = investmentNumber($('#familyTradeShares').value); const price = investmentNumber($('#familyTradePrice').value); const fee = investmentNumber($('#familyTradeFee').value); const gross = shares * price; const amount = type === 'buy' ? gross + fee : gross - fee; const holding = account.holdings[symbol]; if (!holding || !shares || !price) return; if (type === 'buy' && amount > investmentNumber(account.cash)) { alert('예수금이 부족해요. 수수료까지 포함해 확인해주세요.'); return; } if (type === 'sell' && shares > investmentNumber(holding.shares)) { alert('현재 보유 수량보다 많이 매도할 수 없어요.'); return; } if (type === 'buy') { holding.averagePrice = (investmentNumber(holding.shares) * investmentNumber(holding.averagePrice) + amount) / (investmentNumber(holding.shares) + shares); holding.shares = investmentNumber(holding.shares) + shares; account.cash = investmentNumber(account.cash) - amount; } else { holding.shares = investmentNumber(holding.shares) - shares; account.cash = investmentNumber(account.cash) + amount; if (!holding.shares) holding.averagePrice = 0; } holding.currentPrice = price; const date = $('#familyTradeDate').value; account.trades.unshift({ id: createGoalId(), date, symbol, type, shares, price, fee, amount, note: $('#familyTradeNote').value.trim() }); snapshotFamilyAccount(account, `${date}T12:00:00`); persist(); render(); $('#familyTradeDialog').close(); });
 document.querySelectorAll('[data-character-tab]').forEach((tab) => tab.addEventListener('click', () => { document.querySelectorAll('[data-character-tab]').forEach((item) => item.classList.toggle('is-active', item === tab)); document.querySelectorAll('[data-character-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.characterPanel === tab.dataset.characterTab)); }));
 characterSummary.addEventListener('click', (event) => { if (event.target.closest('#editProfileButton')) openProfileDialog(); });
 function logGrowthActivity(activityId) { const activity = state.growth.activities.find((item) => item.id === activityId); if (!activity) return; const loggedAt = new Date().toISOString(); const sourceLogId = createGoalId(); const lifeXpBefore = lifeXp(); const skillXpBefore = Object.fromEntries(state.growth.skills.map((skill) => [skill.id, skill.xp || 0])); const rewards = activity.rewards.map((reward) => ({ ...reward, skillName: growthSkill(reward.skillId)?.name || '삭제된 스킬' })); const levelLogs = levelUpLogsForActivity(activity, sourceLogId, loggedAt, lifeXpBefore, skillXpBefore); rewards.forEach((reward) => { const skill = growthSkill(reward.skillId); if (skill) skill.xp = (skill.xp || 0) + (Number(reward.xp) || 0); }); const activityLog = { id: sourceLogId, type: 'activity', title: activity.name, lifeXp: Number(activity.lifeXp) || 0, rewards, loggedAt }; state.growth.logs.unshift(...levelLogs, activityLog); persist(); render(); showGrowthToast(`${activity.name} 완료!`, `캐릭터 <b>+${Number(activity.lifeXp) || 0} XP</b>${rewards.length ? ` · ${rewardSummary(rewards)}` : ''}`); levelLogs.forEach((log) => showGrowthToast(log.title, log.levelTarget === 'life' ? '캐릭터 레벨업!' : '스킬 레벨업!', log.levelTarget === 'life' ? 'life-level-up' : 'level-up')); }
@@ -982,10 +825,6 @@ $('#addRewardButton').addEventListener('click', () => { const container = $('#ac
 $('#activityRewardList').addEventListener('click', (event) => { if (event.target.closest('[data-remove-reward]')) event.target.closest('.reward-row').remove(); });
 $('#activityForm').addEventListener('submit', (event) => { event.preventDefault(); const name = $('#activityName').value.trim(); if (!name) return; const rewards = [...$('#activityRewardList').querySelectorAll('.reward-row')].map((row) => ({ skillId: row.querySelector('.reward-skill').value, xp: Number(row.querySelector('.reward-xp').value) || 0 })).filter((reward) => reward.skillId); const existing = state.growth.activities.find((item) => item.id === editingActivityId); const activity = { id: existing?.id || createGoalId(), name, lifeXp: Number($('#activityLifeXp').value) || 0, rewards }; const index = state.growth.activities.findIndex((item) => item.id === editingActivityId); if (index >= 0) state.growth.activities[index] = activity; else state.growth.activities.push(activity); persist(); render(); $('#activityDialog').close(); });
 $('#profileForm').addEventListener('submit', async (event) => { event.preventDefault(); const name = $('#profileName').value.trim(); if (!name) return; const imageFile = $('#profileImageFile').files[0]; const imageUrl = $('#profileImageUrl').value.trim(); if (imageFile && imageFile.size > 1 * 1024 * 1024) { alert('프로필 사진은 1MB 이하로 선택해주세요.'); return; } if (imageUrl) { try { const parsedUrl = new URL(imageUrl); if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error(); } catch { alert('http 또는 https로 시작하는 이미지 URL을 입력해주세요.'); $('#profileImageUrl').focus(); return; } } const image = imageFile ? await new Promise((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.readAsDataURL(imageFile); }) : imageUrl || ($('#removeProfileImage').checked ? '' : state.growth.profile.image || ''); state.growth.profile = { name, bio: $('#profileBio').value.trim(), image }; persist(); render(); profileDialog.close(); });
-authButtons.forEach((authButton) => authButton.addEventListener('click', async () => { if (!supabaseClient) { alert('클라우드 연결을 불러오지 못했어요. 인터넷 연결을 확인해주세요.'); return; } if (signedInUser) { await supabaseClient.auth.signOut(); return; } $('#authForm').reset(); $('#authMessage').textContent = ''; authDialog.showModal(); $('#authEmail').focus(); }));
-async function submitAuth(mode) { if (!supabaseClient) return; const email = $('#authEmail').value.trim(); const password = $('#authPassword').value; if (!email || !password) return; const message = $('#authMessage'); message.textContent = '처리 중…'; const result = mode === 'signup' ? await supabaseClient.auth.signUp({ email, password }) : await supabaseClient.auth.signInWithPassword({ email, password }); if (result.error) { message.textContent = result.error.message; return; } if (mode === 'signup' && !result.data.session) { message.textContent = '인증 이메일을 보냈어요. 메일의 링크를 열어 계정을 확인해주세요.'; return; } message.textContent = ''; authDialog.close(); await applySession(result.data.session); }
-$('#authForm').addEventListener('submit', async (event) => { event.preventDefault(); await submitAuth('signin'); });
-$('#signUpButton').addEventListener('click', async () => { await submitAuth('signup'); });
 const backupDialog = $('#backupDialog');
 async function createPortableBackup() { return { format: 'my-life-os-portable-backup', version: 1, exportedAt: new Date().toISOString(), data: cloneCloudState(state) }; }
 function downloadBackup(payload) { const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `my-life-os-backup-${new Date().toISOString().slice(0, 10)}.json`; document.body.append(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url); }
@@ -993,14 +832,10 @@ function openBackupDialog() { $('#backupForm').reset(); $('#backupMessage').text
 document.querySelectorAll('[data-backup-button]').forEach((button) => button.addEventListener('click', openBackupDialog));
 $('#closeBackupButton').addEventListener('click', () => backupDialog.close()); $('#cancelBackupButton').addEventListener('click', () => backupDialog.close()); backupDialog.addEventListener('click', (event) => { if (event.target === backupDialog) backupDialog.close(); });
 $('#exportBackupButton').addEventListener('click', async () => { const button = $('#exportBackupButton'); const message = $('#backupMessage'); button.disabled = true; button.textContent = '백업 파일 준비 중…'; message.textContent = ''; try { const backup = await createPortableBackup(); downloadBackup(backup); message.textContent = '전체 백업 파일을 다운로드했어요. 안전한 곳에 보관해주세요.'; } catch (error) { console.error(error); message.textContent = `백업을 완료하지 못했어요. ${error.message || '다시 시도해주세요.'}`; } finally { button.disabled = false; button.textContent = '전체 백업 다운로드'; } });
-$('#importBackupButton').addEventListener('click', async () => { const file = $('#importBackupFile').files[0]; const message = $('#backupMessage'); if (!file) { message.textContent = '복원할 .json 백업 파일을 먼저 선택해주세요.'; return; } try { const backup = JSON.parse(await file.text()); if (backup?.format !== 'my-life-os-portable-backup' || !backup.data || typeof backup.data !== 'object') throw new Error('이 앱에서 만든 백업 파일이 아니에요.'); if (!confirm('현재 브라우저의 모든 기록을 백업 파일 내용으로 바꿀까요? 이 작업은 되돌릴 수 없어요.')) return; state = cloneCloudState(backup.data); normalizeState(); ensureOkrWorkspace(); normalizeKnowledgeState(); normalizeVaultState(); persist(); render(); message.textContent = '백업을 복원했어요. 로그인 상태라면 클라우드에도 동기화됩니다.'; } catch (error) { console.error(error); message.textContent = `복원하지 못했어요. ${error.message || '백업 파일을 확인해주세요.'}`; } });
-function setActiveView(view, writeHash = true) { const allowedViews = ['character', 'vision', 'goals', 'achievements', 'business', 'investment']; const activeView = allowedViews.includes(view) ? view : 'vision'; document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.viewPanel === activeView)); document.querySelectorAll('.main-nav [data-nav-view]').forEach((button) => button.classList.toggle('is-active', button.dataset.navView === activeView)); safelyStoreLocal('my-life-active-view', activeView); if (writeHash && location.hash !== `#${activeView}`) location.hash = activeView; if (activeView === 'investment') refreshMarketQuotes(); else stopKnowledgeSimulation(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+$('#importBackupButton').addEventListener('click', async () => { const file = $('#importBackupFile').files[0]; const message = $('#backupMessage'); if (!file) { message.textContent = '복원할 .json 백업 파일을 먼저 선택해주세요.'; return; } try { const backup = JSON.parse(await file.text()); if (backup?.format !== 'my-life-os-portable-backup' || !backup.data || typeof backup.data !== 'object') throw new Error('이 앱에서 만든 백업 파일이 아니에요.'); if (!confirm('현재 브라우저의 모든 기록을 백업 파일 내용으로 바꿀까요? 이 작업은 되돌릴 수 없어요.')) return; state = cloneCloudState(backup.data); normalizeState(); ensureOkrWorkspace(); normalizeKnowledgeState(); normalizeVaultState(); persist(); render(); message.textContent = '백업을 이 PC의 브라우저 저장소로 복원했어요.'; } catch (error) { console.error(error); message.textContent = `복원하지 못했어요. ${error.message || '백업 파일을 확인해주세요.'}`; } });
+function setActiveView(view, writeHash = true) { const allowedViews = ['character', 'vision', 'goals', 'achievements', 'business']; const activeView = allowedViews.includes(view) ? view : 'vision'; document.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('is-active', panel.dataset.viewPanel === activeView)); document.querySelectorAll('.main-nav [data-nav-view]').forEach((button) => button.classList.toggle('is-active', button.dataset.navView === activeView)); safelyStoreLocal('my-life-active-view', activeView); if (writeHash && location.hash !== `#${activeView}`) location.hash = activeView; stopKnowledgeSimulation(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function setupPullToRefresh() { if (!window.matchMedia('(pointer: coarse)').matches) return; const threshold = 78; let startY = 0; let distance = 0; let tracking = false; const reset = () => { tracking = false; distance = 0; pullToRefresh.classList.remove('is-visible', 'is-ready', 'is-loading'); }; document.addEventListener('touchstart', (event) => { if (window.scrollY > 0 || event.touches.length !== 1) return; startY = event.touches[0].clientY; distance = 0; tracking = true; }, { passive: true }); document.addEventListener('touchmove', (event) => { if (!tracking || event.touches.length !== 1) return; const nextDistance = event.touches[0].clientY - startY; if (nextDistance <= 0 || window.scrollY > 0) { reset(); return; } distance = Math.min(nextDistance, 118); const ready = distance >= threshold; pullToRefresh.classList.add('is-visible'); pullToRefresh.classList.toggle('is-ready', ready); pullToRefreshText.textContent = ready ? '놓으면 새로고침' : '당겨서 새로고침'; if (distance > 8) event.preventDefault(); }, { passive: false }); const finish = () => { if (!tracking) return; const shouldRefresh = distance >= threshold; if (!shouldRefresh) { reset(); return; } tracking = false; pullToRefresh.classList.add('is-loading'); pullToRefreshText.textContent = '새로고침 중…'; window.setTimeout(() => window.location.reload(), 160); }; document.addEventListener('touchend', finish, { passive: true }); document.addEventListener('touchcancel', reset, { passive: true }); }
 document.addEventListener('click', (event) => { const navigation = event.target.closest('[data-nav-view]'); if (!navigation) return; setActiveView(navigation.dataset.navView); });
-document.addEventListener('pointerover', (event) => { const dot = event.target.closest('.performance-dot[data-chart-tooltip]'); if (dot) showInvestmentChartTooltip(dot); });
-document.addEventListener('pointerout', (event) => { const dot = event.target.closest('.performance-dot[data-chart-tooltip]'); const nextDot = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.performance-dot[data-chart-tooltip]') : null; if (dot && !nextDot) hideInvestmentChartTooltip(dot); });
-document.addEventListener('focusin', (event) => { const dot = event.target.closest('.performance-dot[data-chart-tooltip]'); if (dot) showInvestmentChartTooltip(dot); });
-document.addEventListener('focusout', (event) => { const dot = event.target.closest('.performance-dot[data-chart-tooltip]'); if (dot) hideInvestmentChartTooltip(dot); });
 window.addEventListener('hashchange', () => setActiveView(location.hash.slice(1), false));
 
 const newRecordId = () => globalThis.crypto?.randomUUID?.() || `record-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1008,14 +843,6 @@ $('#today').textContent = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', mo
 let addedAchievementOnLoad = false;
 state.goals.forEach((goal) => { if (recordMilestoneAchievements(goal)) addedAchievementOnLoad = true; if (recordAchievement(goal)) addedAchievementOnLoad = true; });
 if (addedAchievementOnLoad) persist();
-ensureDailyInvestmentSnapshots();
 render();
-ensureUsdKrwRate().then(renderInvestments, renderInvestments);
-refreshMarketQuotes();
-window.setInterval(() => { if (document.querySelector('[data-view-panel="investment"]')?.classList.contains('is-active')) refreshMarketQuotes(); }, 5000);
-window.setInterval(() => { if (ensureDailyInvestmentSnapshots()) renderInvestments(); }, 3600000);
-window.setInterval(() => { if (signedInUser && !cloudHasLocalChanges && !cloudSavePromise) loadCloudState(); }, 30000);
-window.addEventListener('pagehide', () => { if (signedInUser && cloudHasLocalChanges) saveCloudState(); });
 setupPullToRefresh();
 setActiveView(location.hash.slice(1) || localStorage.getItem('my-life-active-view') || 'vision', false);
-initializeCloudSync();
